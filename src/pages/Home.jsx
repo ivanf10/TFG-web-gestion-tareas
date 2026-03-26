@@ -1,19 +1,61 @@
-import { Bell } from "lucide-react";
 import { useAppState } from "../hooks/useAppState";
 import Header from "../components/layout/Header";
 
-export default function Home() {
+export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
   const {
     selectedDate,
     setSelectedDate,
     currentMonth,
     calendarDays,
     weekDays,
-    tasks,
-    stats,
     prevMonth,
     nextMonth,
   } = useAppState();
+
+  // Tareas del día seleccionado (esto sigue como lo tienes)
+  const tasks = allTasks.filter(
+    (t) => t.date === selectedDate
+  );
+
+  // Fecha de hoy (sin horas)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Tareas atrasadas (lógica correcta)
+  const lateTasksCount = allTasks.filter((t) => {
+    if (t.completed) return false;
+
+    if (!t.dueDate) return false;
+
+    const taskDate = new Date(t.dueDate);
+    taskDate.setHours(0, 0, 0, 0);
+
+    return taskDate < today;
+  }).length;
+
+  // Estadísticas (solo números dinámicos)
+  const stats = [
+    {
+      value: allTasks.length,
+      type: "total",
+      label: "Tareas Totales",
+    },
+    {
+      value: allTasks.filter((t) => !t.completed).length,
+      type: "pending",
+      label: "Pendientes",
+    },
+    {
+      value: allTasks.filter((t) => t.completed).length,
+      type: "completed",
+      label: "Completadas",
+    },
+    {
+      value: lateTasksCount,
+      type: "late",
+      label: "Atrasadas",
+    },
+  ];
 
   return (
   <main
@@ -134,44 +176,57 @@ export default function Home() {
                     gap: "8px",
                   }}
                 >
-                  {calendarDays.map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedDate(item.date)}
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "8px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        backgroundColor:
-                          selectedDate === item.date
-                            ? "#3f63eb"
-                            : "transparent",
-                        color:
-                          selectedDate === item.date ? "white" : "#4b5563",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "background-color 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedDate !== item.date) {
-                          e.currentTarget.style.backgroundColor = "#f3f4f6";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedDate !== item.date) {
-                          e.currentTarget.style.backgroundColor =
-                            "transparent";
-                        }
-                      }}
-                    >
-                      {item.date}
-                    </button>
-                  ))}
+                  {calendarDays.map((item, idx) => {
+                    if (item.empty) {
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            minHeight: "40px",
+                            minWidth: "40px",
+                          }}
+                        />
+                      );
+                    }
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedDate(item.date)}
+                        style={{
+                          minHeight: "40px",
+                          minWidth: "40px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          backgroundColor:
+                            selectedDate === item.date
+                              ? "#3f63eb"
+                              : "transparent",
+                          color:
+                            selectedDate === item.date ? "white" : "#4b5563",
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "background-color 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedDate !== item.date) {
+                            e.currentTarget.style.backgroundColor = "#f3f4f6";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedDate !== item.date) {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }
+                        }}
+                      >
+                        {item.date}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -208,6 +263,7 @@ export default function Home() {
                 >
                   Tareas del {selectedDate} de {currentMonth}
                 </h3>
+
                 <div
                   style={{
                     display: "flex",
@@ -216,6 +272,21 @@ export default function Home() {
                     flex: 1,
                   }}
                 >
+                  {/* SIN TAREAS */}
+                  {tasks.length === 0 && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#9ca3af",
+                        fontSize: "14px",
+                        marginTop: "20px",
+                      }}
+                    >
+                      No hay tareas para este día
+                    </div>
+                  )}
+
+                  {/* LISTADO */}
                   {tasks.map((task) => (
                     <div
                       key={task.id}
@@ -229,13 +300,13 @@ export default function Home() {
                         (e.currentTarget.style.backgroundColor = "#f9fafb")
                       }
                       onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor =
-                          "transparent")
+                        (e.currentTarget.style.backgroundColor = "transparent")
                       }
                     >
+                      {/* CHECK */}
                       <input
                         type="checkbox"
-                        checked={task.completed}
+                        checked={task.completed || false}
                         style={{
                           marginTop: "4px",
                           width: "16px",
@@ -247,6 +318,8 @@ export default function Home() {
                         }}
                         readOnly
                       />
+
+                      {/* TEXTO */}
                       <div className="flex-grow-1">
                         <p
                           style={{
@@ -259,8 +332,9 @@ export default function Home() {
                               : "none",
                           }}
                         >
-                          {task.title}
+                          {task.title || "Sin título"}
                         </p>
+
                         <p
                           style={{
                             fontSize: "12px",
@@ -268,18 +342,9 @@ export default function Home() {
                             marginBottom: "0",
                           }}
                         >
-                          {task.category}
+                          {task.category || "Sin categoría"}
                         </p>
                       </div>
-                      <img
-                        src={task.avatar}
-                        alt=""
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                        }}
-                      />
                     </div>
                   ))}
                 </div>
@@ -289,7 +354,7 @@ export default function Home() {
         </div>
 
         {/* Statistics Section */}
-          <div>
+        <div>
           <h3
             style={{
               fontSize: "clamp(16px, 4vw, 18px)",
@@ -300,6 +365,7 @@ export default function Home() {
           >
             Estadísticas
           </h3>
+
           <div
             style={{
               display: "grid",
@@ -307,95 +373,153 @@ export default function Home() {
               gap: "16px",
             }}
           >
-            {stats.map((stat, idx) => (
+            {/* TOTAL */}
+            <div
+              className="rounded-2xl"
+              style={{
+                padding: "clamp(16px, 4vw, 28px) clamp(16px, 5vw, 24px)",
+                backgroundColor: "#f3e8ff",
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
               <div
-                key={idx}
-                className="rounded-2xl"
                 style={{
-                  padding: "clamp(16px, 4vw, 28px) clamp(16px, 5vw, 24px)",
-                  backgroundColor:
-                    stat.type === "total"
-                      ? "#f3e8ff"
-                      : stat.type === "pending"
-                      ? "#fefce8"
-                      : stat.type === "completed"
-                      ? "#f0fdf4"
-                      : "#fef2f2",
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "8px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "clamp(12px, 3vw, 16px)",
-                  flexWrap: "nowrap",
-                  whiteSpace: "nowrap",
+                  justifyContent: "center",
+                  backgroundColor: "#e9d5ff",
                 }}
               >
-                <div
-                  style={{
-                    width: "clamp(48px, 10vw, 56px)",
-                    height: "clamp(48px, 10vw, 56px)",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    backgroundColor:
-                      stat.type === "total"
-                        ? "#e9d5ff"
-                        : stat.type === "pending"
-                        ? "#fee2cb"
-                        : stat.type === "completed"
-                        ? "#dcfce7"
-                        : "#fee2e2",
-                  }}
-                >
-                  {stat.type === "total" && (
-                    <svg width="24" height="24" fill="none">
-                      <rect x="3" y="3" width="18" height="18" rx="2" stroke="#6366F1" strokeWidth="2" />
-                      <path d="M8 12h8M8 8h8M8 16h5" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  )}
-
-                  {stat.type === "pending" && (
-                    <svg width="24" height="24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth="2" />
-                      <path d="M12 7v5l3 3" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  )}
-
-                  {stat.type === "completed" && (
-                    <svg width="24" height="24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="2" />
-                      <path d="M8 12l2 2 4-4" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-
-                  {stat.type === "late" && (
-                    <svg width="24" height="24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="#EF4444" strokeWidth="2" />
-                      <path d="M12 8v4M12 16h.01" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "clamp(24px, 6vw, 28px)",
-                    fontWeight: "700",
-                    color: "#111827",
-                  }}
-                >
-                  {stat.value}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "clamp(12px, 3vw, 15px)",
-                    color: "#6b7280",
-                  }}
-                >
-                  {stat.label}
-                </div>
+                <svg width="24" height="24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="#6366F1" strokeWidth="2" />
+                  <path d="M8 12h8M8 8h8M8 16h5" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </div>
-            ))}
+
+              <div style={{ fontSize: "28px", fontWeight: "700" }}>
+                {allTasks.length}
+              </div>
+
+              <div style={{ color: "#6b7280" }}>
+                Tareas Totales
+              </div>
+            </div>
+
+            {/* PENDIENTES */}
+            <div
+              className="rounded-2xl"
+              style={{
+                padding: "clamp(16px, 4vw, 28px) clamp(16px, 5vw, 24px)",
+                backgroundColor: "#fefce8",
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#fee2cb",
+                }}
+              >
+                <svg width="24" height="24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth="2" />
+                  <path d="M12 7v5l3 3" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div style={{ fontSize: "28px", fontWeight: "700" }}>
+                {allTasks.filter(t => !t.completed).length}
+              </div>
+
+              <div style={{ color: "#6b7280" }}>
+                Pendientes
+              </div>
+            </div>
+
+            {/* COMPLETADAS */}
+            <div
+              className="rounded-2xl"
+              style={{
+                padding: "clamp(16px, 4vw, 28px) clamp(16px, 5vw, 24px)",
+                backgroundColor: "#f0fdf4",
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#dcfce7",
+                }}
+              >
+                <svg width="24" height="24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="2" />
+                  <path d="M8 12l2 2 4-4" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+
+              <div style={{ fontSize: "28px", fontWeight: "700" }}>
+                {allTasks.filter(t => t.completed).length}
+              </div>
+
+              <div style={{ color: "#6b7280" }}>
+                Completadas
+              </div>
+            </div>
+
+            {/* ATRASADAS */}
+            <div
+              className="rounded-2xl"
+              style={{
+                padding: "clamp(16px, 4vw, 28px) clamp(16px, 5vw, 24px)",
+                backgroundColor: "#fef2f2",
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#fee2e2",
+                }}
+              >
+                <svg width="24" height="24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#EF4444" strokeWidth="2" />
+                  <path d="M12 8v4M12 16h.01" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div style={{ fontSize: "28px", fontWeight: "700" }}>
+                {lateTasksCount}
+              </div>
+
+              <div style={{ color: "#6b7280" }}>
+                Atrasadas
+              </div>
+            </div>
           </div>
         </div>
       </div>
