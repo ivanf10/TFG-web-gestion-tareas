@@ -66,15 +66,18 @@ export default function Layout() {
             allTasks={allTasks || []}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
 
-            selectedTask={selectedTask} 
+            selectedTask={selectedTask}
             setSelectedTask={setSelectedTask}
 
-            setShowAddTaskModal={setShowAddTaskModal}
-            setEditingTask={setEditingTask}
+            editingTask={editingTask}
+            showEditModal={showEditModal}
+
+            editFormData={editFormData}
             setEditFormData={setEditFormData}
+
+            setEditingTask={setEditingTask}
             setShowEditModal={setShowEditModal}
 
-            // acciones
             addTask={addTask}
             updateTask={updateTask}
             deleteTask={deleteTask}

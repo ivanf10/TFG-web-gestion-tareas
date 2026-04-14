@@ -6,10 +6,14 @@ export default function Tasks({
   selectedTask,
   setSelectedTask,
   toggleTaskStatus,
+  editingTask,
   setEditingTask,
+  editFormData,
   setEditFormData,
   setShowEditModal,
-  addTask
+  showEditModal,
+  addTask,
+  updateTask,
 }) {
   // Buscador y filtros
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -738,6 +742,7 @@ export default function Tasks({
                           dueDate: newTask.fechaLimite,
                           assignedTo: newTask.asignarA,
                           completed: newTask.estado === "Completada",
+                          recordatorio: newTask.recordatorio,
                         });
 
                         setShowAddTaskModal(false);
@@ -1067,6 +1072,44 @@ export default function Tasks({
                       </p>
                     </div>
                   </div>
+                  
+                  {/* RECORDATORIO */}
+                  <div className="mb-4">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "12px",
+                        backgroundColor: "#f9fafb",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        id="recordatorio_detalle"
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          cursor: "not-allowed",
+                          accentColor: "#3f63eb",
+                        }}
+                        checked={selectedTask.recordatorio || false}
+                        disabled
+                      />
+                      <label
+                        htmlFor="recordatorio_detalle"
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          color: "#111827",
+                          marginBottom: 0,
+                        }}
+                      >
+                        Enviar recordatorio
+                      </label>
+                    </div>
+                  </div>
 
                   {/* ACCIONES */}
                   <div
@@ -1126,6 +1169,7 @@ export default function Tasks({
                             fechaLimite: selectedTask.dueDate,
                             estado: selectedTask.completed ? "Completada" : "Pendiente",
                             asignarA: selectedTask.assignedTo,
+                            recordatorio: selectedTask.recordatorio,
                           });
                           setShowEditModal(true);
                           setSelectedTask(null);
@@ -1200,6 +1244,365 @@ export default function Tasks({
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Edit Task Modal */}
+          {showEditModal && editingTask && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 2000,
+              }}
+              onClick={() => setShowEditModal(false)}
+            >
+              <div
+                className="card rounded-3"
+                style={{
+                  width: "90%",
+                  maxWidth: "600px",
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="card-body p-4">
+                  {/* HEADER */}
+                  <div className="d-flex align-items-start justify-content-between mb-4">
+                    <div style={{ flex: 1 }}>
+                      <h2
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: "700",
+                          marginBottom: "4px",
+                          color: "#111827",
+                        }}
+                      >
+                        {editingTask.title}
+                      </h2>
+                      <p
+                        style={{
+                          fontSize: "13px",
+                          color: "#6b7280",
+                          marginBottom: 0,
+                        }}
+                      >
+                        ID: {String(editingTask.id).padStart(4, "0")} ·{" "}
+                        <span style={{ color: "#3f63eb" }}>Editar Tarea</span>
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setShowEditModal(false)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: "24px",
+                        cursor: "pointer",
+                        color: "#6b7280",
+                        padding: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <form>
+                    {/* TITULO */}
+                    <div className="mb-3">
+                      <label
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#111827",
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Título de la tarea <span style={{ color: "#ef4444" }}>*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{
+                          borderRadius: "6px",
+                          borderColor: "#e5e7eb",
+                          fontSize: "14px",
+                          padding: "10px 12px",
+                        }}
+                        value={editFormData.titulo}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            titulo: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    {/* DESCRIPCION */}
+                    <div className="mb-3">
+                      <label
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#111827",
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Descripción
+                      </label>
+
+                      <textarea
+                        className="form-control"
+                        style={{
+                          borderRadius: "6px",
+                          borderColor: "#e5e7eb",
+                          fontSize: "14px",
+                          padding: "10px 12px",
+                          minHeight: "100px",
+                          resize: "vertical",
+                        }}
+                        value={editFormData.descripcion}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            descripcion: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    {/* ROW 1 */}
+                    <div className="row g-3 mb-3">
+                      <div className="col-md-6">
+                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                          Departamento
+                        </label>
+
+                        <select
+                          className="form-select"
+                          style={{
+                            borderRadius: "6px",
+                            borderColor: "#e5e7eb",
+                            fontSize: "14px",
+                            padding: "10px 12px",
+                          }}
+                          value={editFormData.departamento}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              departamento: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar...</option>
+                          <option value="Diseño">Diseño</option>
+                          <option value="Ingeniería">Ingeniería</option>
+                          <option value="Ventas">Ventas</option>
+                          <option value="Marketing">Marketing</option>
+                          <option value="Recursos Humanos">Recursos Humanos</option>
+                        </select>
+                      </div>
+
+                      <div className="col-md-6">
+                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                          Fecha Límite
+                        </label>
+
+                        <input
+                          type="date"
+                          className="form-control"
+                          style={{
+                            borderRadius: "6px",
+                            borderColor: "#e5e7eb",
+                            fontSize: "14px",
+                            padding: "10px 12px",
+                          }}
+                          value={editFormData.fechaLimite}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              fechaLimite: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* ROW 2 */}
+                    <div className="row g-3 mb-4">
+                      <div className="col-md-6">
+                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                          Estado
+                        </label>
+
+                        <select
+                          className="form-select"
+                          style={{
+                            borderRadius: "6px",
+                            borderColor: "#e5e7eb",
+                            fontSize: "14px",
+                            padding: "10px 12px",
+                          }}
+                          value={editFormData.estado}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              estado: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="Pendiente">Pendiente</option>
+                          <option value="En Progreso">En Progreso</option>
+                          <option value="Completada">Completada</option>
+                          <option value="Atrasada">Atrasada</option>
+                        </select>
+                      </div>
+
+                      <div className="col-md-6">
+                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                          Asignar a
+                        </label>
+
+                        <select
+                          className="form-select"
+                          style={{
+                            borderRadius: "6px",
+                            borderColor: "#e5e7eb",
+                            fontSize: "14px",
+                            padding: "10px 12px",
+                          }}
+                          value={editFormData.asignarA}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              asignarA: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar usuario...</option>
+                          <option value="Ana García">Ana García</option>
+                          <option value="Carlos Ruiz">Carlos Ruiz</option>
+                          <option value="Laura Méndez">Laura Méndez</option>
+                          <option value="Pedro Jiménez">Pedro Jiménez</option>
+                          <option value="Sofía Castillo">Sofía Castillo</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* RECORDATORIO */}
+                    <div className="mb-4">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "12px",
+                          backgroundColor: "#f9fafb",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          id="recordatorio_edit"
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            cursor: "pointer",
+                            accentColor: "#3f63eb",
+                          }}
+                          checked={editFormData.recordatorio || false}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              recordatorio: e.target.checked,
+                            })
+                          }
+                        />
+                        <label
+                          htmlFor="recordatorio_edit"
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: "#111827",
+                            cursor: "pointer",
+                            marginBottom: 0,
+                          }}
+                        >
+                          Enviar recordatorio
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* BOTONES */}
+                    <div
+                      style={{
+                        borderTop: "1px solid #e5e7eb",
+                        paddingTop: "16px",
+                        display: "flex",
+                        gap: "12px",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowEditModal(false)}
+                        style={{
+                          padding: "10px 16px",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          backgroundColor: "#f3f4f6",
+                          color: "#4b5563",
+                          border: "none",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateTask({
+                            id: editingTask.id,
+                            title: editFormData.titulo,
+                            description: editFormData.descripcion,
+                            department: editFormData.departamento,
+                            dueDate: editFormData.fechaLimite,
+                            assignedTo: editFormData.asignarA,
+                            completed: editFormData.estado === "Completada",
+                            recordatorio: editFormData.recordatorio,
+                          });
+
+                          setShowEditModal(false);
+                          setSelectedTask(null);
+                          setEditingTask(null);
+                        }}
+                        style={{
+                          padding: "10px 16px",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          backgroundColor: "#2563eb",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>

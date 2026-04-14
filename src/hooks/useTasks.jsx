@@ -11,6 +11,7 @@ export function useTasks() {
       assignedTo: "Ana García",
       dueDate: "2024-10-25",
       completed: false,
+      recordatorio: true,
       date: 25,
       description: "Revisión completa del diseño",
       creationDate: "2024-10-20",
@@ -24,6 +25,7 @@ export function useTasks() {
       assignedTo: "Carlos Ruiz",
       dueDate: "2024-10-28",
       completed: false,
+      recordatorio: false,
       date: 28,
       description: "Backend autenticación",
       creationDate: "2024-10-21",
@@ -37,6 +39,7 @@ export function useTasks() {
       assignedTo: "Laura Méndez",
       dueDate: "2024-10-22",
       completed: true,
+      recordatorio: true, 
       date: 22,
       description: "Informe de resultados",
       creationDate: "2024-10-18",
@@ -56,13 +59,12 @@ export function useTasks() {
       assignedTo: newTask.assignedTo || "",
       dueDate: newTask.dueDate || "",
       completed: newTask.completed || false,
+      recordatorio: newTask.recordatorio ?? false,
 
-      // Día del mes (para calendario)
       date: newTask.dueDate
         ? new Date(newTask.dueDate).getDate()
         : today.getDate(),
 
-      // NUEVO
       creationDate: today.toISOString().split("T")[0],
       createdBy: "Admin",
     };
@@ -77,9 +79,19 @@ export function useTasks() {
         task.id === updatedTask.id
           ? {
               ...task,
-              ...updatedTask,
 
-              // recalcular día calendario si cambia fecha
+              // campos editables
+              title: updatedTask.title,
+              description: updatedTask.description,
+              department: updatedTask.department,
+              assignedTo: updatedTask.assignedTo,
+              dueDate: updatedTask.dueDate,
+              completed: updatedTask.completed,
+
+              recordatorio:
+                updatedTask.recordatorio ?? task.recordatorio,
+
+              // recalcular día calendario
               date: updatedTask.dueDate
                 ? new Date(updatedTask.dueDate).getDate()
                 : task.date,
