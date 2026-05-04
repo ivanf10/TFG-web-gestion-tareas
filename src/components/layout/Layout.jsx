@@ -3,8 +3,10 @@ import Sidebar from "./Sidebar";
 
 import Home from "../../pages/Home";
 import Tasks from "../../pages/Tasks";
+import Departments from "../../pages/Departments";
 
 import { useTasks } from "../../hooks/useTasks";
+import { useDepartments } from "../../hooks/useDepartments";
 
 export default function Layout() {
   const [activeView, setActiveView] = useState("inicio");
@@ -18,6 +20,14 @@ export default function Layout() {
     deleteTask,
     toggleTaskStatus,
   } = useTasks();
+
+  // Hook global de departamentos
+  const {
+    allDepartments,
+    addDepartment,
+    updateDepartment,
+    deleteDepartment,
+  } = useDepartments();
 
   // Estados UI (modales y selección)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -85,9 +95,16 @@ export default function Layout() {
           />
         )}
 
-        {/* FUTURO */}
-        {/* {activeView === "notas" && <Notes />} */}
-        {/* {activeView === "departamentos" && <Departments />} */}
+        {/* DEPARTMENTS */}
+        {activeView === "departamentos" && (
+        <Departments
+          allDepartments={allDepartments}
+          addDepartment={addDepartment}
+          updateDepartment={updateDepartment}
+          deleteDepartment={deleteDepartment}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+      )}
       </main>
     </div>
   );
