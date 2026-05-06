@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Tasks({
   allTasks,
@@ -14,6 +14,7 @@ export default function Tasks({
   showEditModal,
   addTask,
   updateTask,
+  deleteTask
 }) {
   // Buscador y filtros
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -52,6 +53,9 @@ export default function Tasks({
     return "Pendiente";
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const tasksPerPage = 5;
+
   // Filtrado dinámico
   const filteredTasks = allTasks.filter((task) => {
     const realStatus = getTaskStatus(task);
@@ -76,6 +80,26 @@ export default function Tasks({
       matchesUser
     );
   });
+
+  const indexOfLastTask = currentPage * tasksPerPage;
+  const indexOfFirstTask = indexOfLastTask - tasksPerPage;
+
+  const currentTasks = filteredTasks.slice(
+    indexOfFirstTask,
+    indexOfLastTask
+  );
+
+  // 4. RESET AL FILTRAR
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [taskSearchQuery, statusFilter, departmentFilter, userFilter]);
+
+  // 5. AJUSTE AL BORRAR (IMPORTANTE)
+  useEffect(() => {
+    if (currentPage > 1 && indexOfFirstTask >= filteredTasks.length) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  }, [filteredTasks, currentPage, indexOfFirstTask]);
 
   return (
     <div className="p-3 p-md-5">
@@ -234,7 +258,7 @@ export default function Tasks({
               </thead>
 
               <tbody>
-                {filteredTasks.map((task) => {
+                {currentTasks.map((task) => {
                   const status = getTaskStatus(task);
 
                   return (
@@ -336,29 +360,36 @@ export default function Tasks({
                         </button>
 
                         <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+
+                            if (window.confirm("¿Seguro que quieres eliminar esta tarea?")) {
+                              deleteTask(task.id);
+                            }
+                          }}
                           className="btn btn-sm"
-                              style={{
-                                padding: "4px",
-                                backgroundColor: "transparent",
-                                border: "none",
-                                color: "#dc2626",
-                              }}
-                            >
-                              <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
+                          style={{
+                            padding: "4px",
+                            backgroundColor: "transparent",
+                            border: "none",
+                            color: "#dc2626",
+                          }}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </button>
                       </td>
                     </tr>
@@ -373,32 +404,42 @@ export default function Tasks({
             style={{ fontSize: "14px", color: "#6b7280" }}
           >
             <p style={{ marginBottom: "0" }}>
-              Mostrando 1 a {filteredTasks.length} de {allTasks.length} resultados
+              Mostrando {indexOfFirstTask + 1} a{" "}
+              {Math.min(indexOfLastTask, filteredTasks.length)} de{" "}
+              {filteredTasks.length} resultados
             </p>
 
             <div className="d-flex gap-2">
               <button
-                      className="btn btn-sm"
-                      style={{
-                        padding: "6px 12px",
-                        backgroundColor: "transparent",
-                        border: "1px solid #e5e7eb",
-                        color: "#4b5563",
-                        borderRadius: "6px",
-                      }}
-                    >
+                className="btn btn-sm"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "transparent",
+                  border: "1px solid #e5e7eb",
+                  color: "#4b5563",
+                  borderRadius: "6px",
+                }}
+              >
                 &lsaquo;
               </button>
               <button
-                      className="btn btn-sm"
-                      style={{
-                        padding: "6px 12px",
-                        backgroundColor: "transparent",
-                        border: "1px solid #e5e7eb",
-                        color: "#4b5563",
-                        borderRadius: "6px",
-                      }}
-                    >
+                className="btn btn-sm"
+                onClick={() =>
+                  setCurrentPage((prev) =>
+                    indexOfLastTask < filteredTasks.length ? prev + 1 : prev
+                  )
+                }
+                disabled={indexOfLastTask >= filteredTasks.length}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "transparent",
+                  border: "1px solid #e5e7eb",
+                  color: "#4b5563",
+                  borderRadius: "6px",
+                }}
+              >
                 &rsaquo;
               </button>
             </div>
@@ -1122,9 +1163,13 @@ export default function Tasks({
                     }}
                   >
                     <button
-                      onClick={() => {
-                        deleteTask(selectedTask.id);
-                        setSelectedTask(null);
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        if (window.confirm("¿Seguro que quieres eliminar esta tarea?")) {
+                          deleteTask(selectedTask.id);
+                          setSelectedTask(null); 
+                        }
                       }}
                       style={{
                         padding: "10px 16px",
@@ -1141,20 +1186,20 @@ export default function Tasks({
                       }}
                     >
                       <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                        width="18"
+                        height="18"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                       Eliminar
                     </button>
 

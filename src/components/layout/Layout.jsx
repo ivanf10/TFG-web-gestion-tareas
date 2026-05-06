@@ -4,15 +4,17 @@ import Sidebar from "./Sidebar";
 import Home from "../../pages/Home";
 import Tasks from "../../pages/Tasks";
 import Departments from "../../pages/Departments";
+import Notes from "../../pages/Notes";
 
 import { useTasks } from "../../hooks/useTasks";
 import { useDepartments } from "../../hooks/useDepartments";
+import { useNotes } from "../../hooks/useNotes";
 
 export default function Layout() {
   const [activeView, setActiveView] = useState("inicio");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Hook global de tareas
+  // TASKS
   const {
     allTasks,
     addTask,
@@ -29,8 +31,7 @@ export default function Layout() {
     deleteDepartment,
   } = useDepartments();
 
-  // Estados UI (modales y selección)
-  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  // TASK UI
   const [selectedTask, setSelectedTask] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,6 +45,29 @@ export default function Layout() {
     asignarA: "",
   });
 
+  // NOTES
+  const {
+    allNotes,
+    addNote,
+    updateNote,
+    deleteNote,
+  } = useNotes();
+
+  // UI NOTES
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [showEditNoteModal, setShowEditNoteModal] = useState(false);
+  const [selectedNoteForDetail, setSelectedNoteForDetail] = useState(null);
+  const [showNoteDetailModal, setShowNoteDetailModal] = useState(false);
+
+  const [editNoteFormData, setEditNoteFormData] = useState({
+    titulo: "",
+    contenido: "",
+    audioUrl: "",
+    imageUrl: "",
+  });
+
+  // RENDER
   return (
     <div className="d-flex">
       {/* SIDEBAR */}
@@ -97,14 +121,45 @@ export default function Layout() {
 
         {/* DEPARTMENTS */}
         {activeView === "departamentos" && (
-        <Departments
-          allDepartments={allDepartments}
-          addDepartment={addDepartment}
-          updateDepartment={updateDepartment}
-          deleteDepartment={deleteDepartment}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-        />
-      )}
+          <Departments
+            allDepartments={allDepartments}
+            addDepartment={addDepartment}
+            updateDepartment={updateDepartment}
+            deleteDepartment={deleteDepartment}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
+
+        {/* NOTES */}
+        {activeView === "notas" && (
+          <Notes
+            allNotes={allNotes}
+
+            addNote={addNote}
+            updateNote={updateNote}
+            deleteNote={deleteNote}
+
+            showAddNoteModal={showAddNoteModal}
+            setShowAddNoteModal={setShowAddNoteModal}
+
+            editingNote={editingNote}
+            setEditingNote={setEditingNote}
+
+            showEditNoteModal={showEditNoteModal}
+            setShowEditNoteModal={setShowEditNoteModal}
+
+            selectedNoteForDetail={selectedNoteForDetail}
+            setSelectedNoteForDetail={setSelectedNoteForDetail}
+
+            showNoteDetailModal={showNoteDetailModal}
+            setShowNoteDetailModal={setShowNoteDetailModal}
+
+            editNoteFormData={editNoteFormData}
+            setEditNoteFormData={setEditNoteFormData}
+
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
       </main>
     </div>
   );
