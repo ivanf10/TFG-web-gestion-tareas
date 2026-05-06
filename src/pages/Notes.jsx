@@ -37,6 +37,7 @@ export default function Notes({
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [editAudioPreview, setEditAudioPreview] = useState("");
 
   // IMAGEN
   const [imageFile, setImageFile] = useState(null);
@@ -47,10 +48,12 @@ export default function Notes({
   const [editRecordingTime, setEditRecordingTime] = useState(0);
   const [editMediaRecorder, setEditMediaRecorder] = useState(null);
   const [editIsRecording, setEditIsRecording] = useState(false);
+  const [editAudioDeleted, setEditAudioDeleted] = useState(false);
 
   // EDIT IMAGE
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
+  const [editImageDeleted, setEditImageDeleted] = useState(false);
 
   // BUSCADOR
   const [noteSearchQuery, setNoteSearchQuery] = useState("");
@@ -98,6 +101,9 @@ export default function Notes({
 
   useEffect(() => {
     if (editingNote) {
+      setEditAudioDeleted(false);
+      setEditAudioBlob(null);
+      setEditImageDeleted(false);
       setEditNoteFormData({
         titulo: editingNote.title || "",
         contenido: editingNote.content || "",
@@ -109,7 +115,6 @@ export default function Notes({
     }
   }, [editingNote]);
 
-  // TIMER
   useEffect(() => {
     let interval;
 
@@ -123,6 +128,18 @@ export default function Notes({
   }, [isRecording]);
 
   useEffect(() => {
+    let interval;
+
+    if (editIsRecording) {
+      interval = setInterval(() => {
+        setEditRecordingTime((prev) => prev + 1);
+      }, 1000);
+    }
+
+  return () => clearInterval(interval);
+}, [editIsRecording]);
+
+  useEffect(() => {
     return () => {
       if (imagePreview && imagePreview.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
@@ -134,12 +151,20 @@ export default function Notes({
     };
   }, [imagePreview, editImagePreview]);
 
-  // START
-  const startRecording = async () => {
+  const startAudioRecording = async ({
+    setBlob,
+    setRecorder,
+    setIsRecording,
+    setTime,
+    onStop,
+  }) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
       const recorder = new MediaRecorder(stream);
+
       let chunks = [];
 
       recorder.ondataavailable = (e) => {
@@ -147,27 +172,63 @@ export default function Notes({
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
+        const blob = new Blob(chunks, {
+          type: "audio/webm",
+        });
 
-        setNewNote((prev) => ({
-          ...prev,
-          audioUrl: URL.createObjectURL(blob),
-        }));
+        setBlob(blob);
+
+        if (onStop) {
+          onStop(blob);
+        }
 
         chunks = [];
       };
 
       recorder.start();
-      setMediaRecorder(recorder);
+
+      setRecorder(recorder);
       setIsRecording(true);
-      setRecordingTime(0);
+      setTime(0);
+
     } catch (error) {
       console.error("Error al acceder al micro:", error);
     }
   };
 
-  // STOP
+  const startRecording = async () => {
+    startAudioRecording({
+      setBlob: setAudioBlob,
+      setRecorder: setMediaRecorder,
+      setIsRecording: setIsRecording,
+      setTime: setRecordingTime,
+
+      onStop: (blob) => {
+        setNewNote((prev) => ({
+          ...prev,
+          audioUrl: URL.createObjectURL(blob),
+        }));
+      },
+    });
+  };
+
+  const startEditRecording = async () => {
+    setEditAudioBlob(null);
+    setEditAudioPreview("");
+
+    startAudioRecording({
+      setBlob: setEditAudioBlob,
+      setRecorder: setEditMediaRecorder,
+      setIsRecording: setEditIsRecording,
+      setTime: setEditRecordingTime,
+
+      onStop: (blob) => {
+        setEditAudioDeleted(true);
+        setEditAudioPreview(URL.createObjectURL(blob));
+      },
+    });
+  };
+
   const stopRecording = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
@@ -177,10 +238,22 @@ export default function Notes({
     }
   };
 
-  // DELETE
+  const stopEditRecording = () => {
+    if (editMediaRecorder) {
+      editMediaRecorder.stop();
+
+      setEditIsRecording(false);
+
+      editMediaRecorder.stream
+        .getTracks()
+        .forEach((t) => t.stop());
+    }
+  };
+
   const deleteRecording = () => {
     setAudioBlob(null);
     setRecordingTime(0);
+    setIsRecording(false);
 
     setNewNote((prev) => ({
       ...prev,
@@ -188,40 +261,13 @@ export default function Notes({
     }));
   };
 
-  // EDIT AUDIO
-  const startEditRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-    const recorder = new MediaRecorder(stream);
-    let chunks = [];
-
-    recorder.ondataavailable = (e) => chunks.push(e.data);
-
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: "audio/webm" });
-      setEditAudioBlob(blob);
-      chunks = [];
-    };
-
-    recorder.start();
-    setEditMediaRecorder(recorder);
-    setEditIsRecording(true);
-    setEditRecordingTime(0);
-  };
-
-  const stopEditRecording = () => {
-    if (editMediaRecorder) {
-      editMediaRecorder.stop();
-      setEditIsRecording(false);
-      editMediaRecorder.stream.getTracks().forEach((t) => t.stop());
-    }
-  };
-
   const deleteEditRecording = () => {
     setEditAudioBlob(null);
+    setEditAudioDeleted(true);
+    setEditAudioPreview("");
   };
 
-  // IMAGE HANDLER
+
   const handleImageFileChange = (e) => {
     const file = e.target.files[0];
 
@@ -238,11 +284,11 @@ export default function Notes({
     }));
   };
 
-  // EDIT IMAGE
   const handleEditImageFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setEditImageDeleted(false);
     setEditImageFile(file);
     setEditImagePreview(URL.createObjectURL(file));
   };
@@ -430,6 +476,7 @@ export default function Notes({
                   {note.tipo === "audio" && (
                     <div style={{ marginBottom: "8px", flex: 1 }}>
                       <audio
+                        key={note.audioUrl}
                         controls
                         style={{
                           width: "100%",
@@ -1069,7 +1116,7 @@ export default function Notes({
                           >
                             <audio controls style={{ width: "100%", height: "32px" }}>
                               <source
-                                src={URL.createObjectURL(audioBlob)}
+                                src={newNote.audioUrl}
                                 type="audio/webm"
                               />
                             </audio>
@@ -1092,29 +1139,6 @@ export default function Notes({
                               }}
                             >
                               Eliminar
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={deleteRecording}
-                              style={{
-                                flex: 1,
-                                padding: "10px 16px",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                                backgroundColor: "#ef4444",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "8px",
-                              }}
-                            >
-                              <span style={{ fontSize: "16px" }}>●</span>
-                              Grabar de nuevo
                             </button>
                           </div>
                         </div>
@@ -1327,7 +1351,6 @@ export default function Notes({
                       return;
                     }
 
-                    // 👇 CONSTRUCCIÓN DINÁMICA
                     const noteData = {
                       title: newNote.titulo,
                       tipo: newNote.tipo,
@@ -1586,7 +1609,8 @@ export default function Notes({
                         padding: "16px",
                       }}
                     >
-                      {!editAudioBlob && !editingNote.audioUrl ? (
+                      {!editAudioBlob && 
+                      (!editingNote.audioUrl || editAudioDeleted) ? (
                         <div>
                           <div
                             style={{
@@ -1689,7 +1713,7 @@ export default function Notes({
                             </p>
                           )}
                         </div>
-                      ) : editAudioBlob || editingNote.audioUrl ? (
+                      ) : editAudioBlob || (editingNote.audioUrl && !editAudioDeleted) ? (
                         <div>
                           <div
                             style={{
@@ -1709,8 +1733,10 @@ export default function Notes({
                               <source
                                 src={
                                   editAudioBlob
-                                    ? URL.createObjectURL(editAudioBlob)
-                                    : editingNote.audioUrl
+                                    ? editAudioPreview
+                                    : !editAudioDeleted
+                                      ? editingNote.audioUrl
+                                      : ""
                                 }
                                 type="audio/webm"
                               />
@@ -1739,28 +1765,6 @@ export default function Notes({
                               }}
                             >
                               Eliminar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteEditRecording()}
-                              style={{
-                                flex: 1,
-                                padding: "10px 16px",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                                backgroundColor: "#ef4444",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "8px",
-                              }}
-                            >
-                              <span style={{ fontSize: "16px" }}>●</span>
-                              Grabar de nuevo
                             </button>
                           </div>
                         </div>
@@ -1800,7 +1804,7 @@ export default function Notes({
                         textAlign: "center",
                       }}
                     >
-                      {!(editImagePreview || editingNote.imageUrl) ? (
+                      {!(editImagePreview || (editingNote.imageUrl && !editImageDeleted)) ? (
                         <div>
                           <label
                             htmlFor="editImageInput"
@@ -1864,10 +1868,12 @@ export default function Notes({
                           >
                             <img
                               src={
-                              editImageFile
-                                ? URL.createObjectURL(editImageFile)
-                                : editingNote.imageUrl
-                            }
+                                editImageFile
+                                  ? URL.createObjectURL(editImageFile)
+                                  : !editImageDeleted
+                                    ? editingNote.imageUrl
+                                    : ""
+                              }
                               alt="Preview"
                               style={{
                                 maxWidth: "100%",
@@ -1887,6 +1893,7 @@ export default function Notes({
                               onClick={() => {
                                 setEditImageFile(null);
                                 setEditImagePreview(null);
+                                setEditImageDeleted(true);
                               }}
                               style={{
                                 flex: 1,
@@ -1944,6 +1951,7 @@ export default function Notes({
                     onClick={() => {
                       setShowEditNoteModal(false);
                       setEditAudioBlob(null);
+                      setEditAudioDeleted(false);
                       setEditRecordingTime(0);
                       setEditImageFile(null);
                       setEditImagePreview(editingNote?.imageUrl || null);
@@ -1983,7 +1991,7 @@ export default function Notes({
                       if (
                         editingNote.tipo === "audio" &&
                         !editAudioBlob &&
-                        !editingNote.audioUrl
+                        (!editingNote.audioUrl || editAudioDeleted)
                       ) {
                         alert("Graba un audio o mantén el existente.");
                         return;
@@ -1992,7 +2000,7 @@ export default function Notes({
                       if (
                         editingNote.tipo === "image" &&
                         !editImageFile &&
-                        !(editImagePreview || editingNote.imageUrl)
+                        !(editImagePreview || (editingNote.imageUrl && !editImageDeleted))
                       ) {
                         alert("Sube una imagen o mantén la existente.");
                         return;
@@ -2000,8 +2008,12 @@ export default function Notes({
 
                       let imageUrl = editingNote.imageUrl;
 
-                      if (editingNote.tipo === "image" && editImageFile) {
-                        imageUrl = await fileToBase64(editImageFile);
+                      if (editingNote.tipo === "image") {
+                        if (editImageFile) {
+                          imageUrl = await fileToBase64(editImageFile);
+                        } else if (editImageDeleted) {
+                          imageUrl = "";
+                        }
                       }
 
                       const updatedNote = {
@@ -2017,8 +2029,10 @@ export default function Notes({
                         audioUrl:
                           editingNote.tipo === "audio"
                             ? editAudioBlob
-                              ? URL.createObjectURL(editAudioBlob)
-                              : editingNote.audioUrl
+                              ? editAudioPreview
+                              : editAudioDeleted
+                                ? ""
+                                : editingNote.audioUrl
                             : "",
 
                         imageUrl,
@@ -2038,6 +2052,7 @@ export default function Notes({
                       });
 
                       setEditAudioBlob(null);
+                      setEditAudioDeleted(false);
                       setEditRecordingTime(0);
                       setEditImageFile(null);
                       setEditImagePreview(null);
