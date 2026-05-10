@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, StickyNote } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Notes({
   allNotes,
@@ -22,6 +23,17 @@ export default function Notes({
 
   setIsMobileMenuOpen,
 }) {
+
+  const { currentUser } = useAuth();
+
+  const visibleNotes =
+    currentUser?.rol === "Admin"
+      ? allNotes
+      : allNotes.filter(
+          (note) =>
+            note.createdBy ===
+            `${currentUser.nombre} ${currentUser.apellido}`,
+        );
 
   // Formulario Nueva Nota
   const [newNote, setNewNote] = useState({
@@ -63,8 +75,10 @@ export default function Notes({
   const notesPerPage = 8;
 
   // FILTRADO
-  const filteredNotes = allNotes.filter((note) =>
-    (note.title || "").toLowerCase().includes(noteSearchQuery.toLowerCase())
+  const filteredNotes = visibleNotes.filter((note) =>
+    (note.title || "")
+      .toLowerCase()
+      .includes(noteSearchQuery.toLowerCase())
   );
 
   const totalNotesPages = Math.ceil(filteredNotes.length / notesPerPage);
@@ -136,8 +150,8 @@ export default function Notes({
       }, 1000);
     }
 
-  return () => clearInterval(interval);
-}, [editIsRecording]);
+    return () => clearInterval(interval);
+  }, [editIsRecording]);
 
   useEffect(() => {
     return () => {
@@ -361,32 +375,95 @@ export default function Notes({
       >
         <div className="card-body p-3 p-md-4">
 
-          {/* SEARCH */}
-          <div className="mb-3">
-            <input
-              type="text"
-              placeholder="Buscar notas por título..."
-              className="form-control"
+          {/* CONTENT */}
+          {filteredNotes.length === 0 ? (
+            <div
               style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
+                minHeight: "420px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "40px 20px",
               }}
-              value={noteSearchQuery}
-              onChange={(e) => setNoteSearchQuery(e.target.value)}
-            />
-          </div>
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    backgroundColor: "#f3f4f6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <StickyNote size={30} color="#9ca3af" />
+                </div>
 
-          {/* GRID */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {paginatedNotes.map((note) => (
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "600",
+                      color: "#111827",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    {allNotes.length === 0
+                      ? "No hay notas registradas"
+                      : "No se encontraron notas"}
+                  </h3>
+
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      marginBottom: 0,
+                    }}
+                  >
+                    {allNotes.length === 0
+                      ? "Crea tu primera nota para comenzar."
+                      : "Prueba con otros términos de búsqueda."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+             <>
+              {/* SEARCH */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Buscar notas por título..."
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                  }}
+                  value={noteSearchQuery}
+                  onChange={(e) => setNoteSearchQuery(e.target.value)}
+                />
+              </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {paginatedNotes.map((note) => (
               <div
                 key={note.id}
                 className="card rounded-2"
@@ -582,73 +659,65 @@ export default function Notes({
               </div>
             ))}
           </div>
+            </>
+          )}
 
           {/* PAGINACIÓN */}
-          <div
-            className="d-flex align-items-center justify-content-between mt-3"
-            style={{ fontSize: "14px", color: "#6b7280" }}
-          >
-            <p style={{ marginBottom: "0" }}>
-              Mostrando{" "}
-              {paginatedNotes.length > 0
-                ? (currentNotesPage - 1) * notesPerPage + 1
-                : 0}{" "}
-              a{" "}
-              {Math.min(
-                currentNotesPage * notesPerPage,
-                filteredNotes.length
-              )}{" "}
-              de {filteredNotes.length} notas
-            </p>
-
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-sm"
-                onClick={handlePreviousNotesPage}
-                disabled={currentNotesPage === 1}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "transparent",
-                  border: "1px solid #e5e7eb",
-                  color: currentNotesPage === 1 ? "#d1d5db" : "#4b5563",
-                  borderRadius: "6px",
-                }}
-              >
-                &lsaquo;
-              </button>
-
-              <button
-                className="btn btn-sm"
-                onClick={handleNextNotesPage}
-                disabled={currentNotesPage >= totalNotesPages}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "transparent",
-                  border: "1px solid #e5e7eb",
-                  color:
-                    currentNotesPage >= totalNotesPages
-                      ? "#d1d5db"
-                      : "#4b5563",
-                  borderRadius: "6px",
-                }}
-              >
-                &rsaquo;
-              </button>
-            </div>
-          </div>
-
-          {/* EMPTY */}
-          {filteredNotes.length === 0 && (
+          {filteredNotes.length > 0 && (
             <div
-              style={{
-                textAlign: "center",
-                padding: "40px 20px",
-                color: "#6b7280",
-              }}
+              className="d-flex align-items-center justify-content-between mt-3"
+              style={{ fontSize: "14px", color: "#6b7280" }}
             >
-              <p style={{ fontSize: "16px", marginBottom: "0" }}>
-                No hay notas que coincidan con tu búsqueda
+              <p style={{ marginBottom: "0" }}>
+                Mostrando{" "}
+                {paginatedNotes.length > 0
+                  ? (currentNotesPage - 1) * notesPerPage + 1
+                  : 0}{" "}
+                a{" "}
+                {Math.min(
+                  currentNotesPage * notesPerPage,
+                  filteredNotes.length
+                )}{" "}
+                de {filteredNotes.length} notas
               </p>
+
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-sm"
+                  onClick={handlePreviousNotesPage}
+                  disabled={currentNotesPage === 1}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: "transparent",
+                    border: "1px solid #e5e7eb",
+                    color:
+                      currentNotesPage === 1
+                        ? "#d1d5db"
+                        : "#4b5563",
+                    borderRadius: "6px",
+                  }}
+                >
+                  &lsaquo;
+                </button>
+
+                <button
+                  className="btn btn-sm"
+                  onClick={handleNextNotesPage}
+                  disabled={currentNotesPage >= totalNotesPages}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: "transparent",
+                    border: "1px solid #e5e7eb",
+                    color:
+                      currentNotesPage >= totalNotesPages
+                        ? "#d1d5db"
+                        : "#4b5563",
+                    borderRadius: "6px",
+                  }}
+                >
+                  &rsaquo;
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1357,6 +1426,7 @@ export default function Notes({
                       content: newNote.contenido || "",
                       audioUrl: "",
                       imageUrl: "",
+                      createdBy: `${currentUser.nombre} ${currentUser.apellido}`,
                     };
 
                     if (newNote.tipo === "audio" && audioBlob) {
@@ -1868,8 +1938,8 @@ export default function Notes({
                           >
                             <img
                               src={
-                                editImageFile
-                                  ? URL.createObjectURL(editImageFile)
+                                editImagePreview
+                                  ? editImagePreview
                                   : !editImageDeleted
                                     ? editingNote.imageUrl
                                     : ""

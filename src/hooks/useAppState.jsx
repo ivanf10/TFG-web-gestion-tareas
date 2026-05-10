@@ -4,7 +4,7 @@ export function useAppState() {
   // Fecha actual (mes dinámico)
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(
-    new Date().getDate()
+    new Date()
   );
 
   // Datos del mes
@@ -33,7 +33,9 @@ export function useAppState() {
 
   // Días reales
   for (let d = 1; d <= daysInMonth; d++) {
-    calendarDays.push({ date: d });
+    calendarDays.push({
+      date: new Date(year, month, d),
+    });
   }
 
   // Días de la semana

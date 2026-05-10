@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { Edit, Trash2, Search } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Departments({
   allDepartments,
+  allUsers,
   addDepartment,
   updateDepartment,
   deleteDepartment,
   setIsMobileMenuOpen,
 }) {
+
+  const { currentUser } = useAuth();
 
   // MODALES
   const [showAddDepartmentModal, setShowAddDepartmentModal] = useState(false);
@@ -46,6 +50,18 @@ export default function Departments({
       .toLowerCase()
       .includes(departmentSearchQuery.toLowerCase())
   );
+
+  const filteredUsers = (allUsers || []).filter((user) => {
+    const fullName =
+      `${user.nombre} ${user.apellido}`;
+
+    return (
+      fullName
+        .toLowerCase()
+        .includes(memberSearch.toLowerCase()) &&
+      !departmentMembers.includes(fullName)
+    );
+  });
 
   return (
     <div className="p-3 p-md-5">
@@ -87,22 +103,22 @@ export default function Departments({
           </h2>
         </div>
 
-        <button
-          onClick={() => {
-            setShowAddDepartmentModal(true);
-            setNewDepartment({ nombre: "", descripcion: "" });
-            setDepartmentMembers([]);
-            setMemberSearch("");
-          }}
-          className="btn btn-primary"
-          style={{
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: "500",
-          }}
-        >
-          + Añadir Departamento
-        </button>
+        {currentUser?.rol === "Admin" && (
+          <button
+            onClick={() => {
+              setShowAddDepartmentModal(true);
+              setNewDepartment({
+                nombre: "",
+                descripcion: "",
+              });
+              setDepartmentMembers([]);
+              setMemberSearch("");
+            }}
+            className="btn btn-primary"
+          >
+            + Añadir Departamento
+          </button>
+        )}
       </div>
 
       <div
@@ -111,117 +127,175 @@ export default function Departments({
       >
         <div className="card-body p-3 p-md-4">
 
-          {/* SEARCH */}
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Buscar por nombre..."
-              className="form-control"
-              style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
-                maxWidth: "300px",
-              }}
-              value={departmentSearchQuery}
-              onChange={(e) => setDepartmentSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* TABLE */}
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={thStyle}>NOMBRE DEL DEPARTAMENTO</th>
-                  <th style={thStyle}>Nº DE EMPLEADOS</th>
-                  <th style={thStyle}>ACCIONES</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredDepartments.map((dept, idx) => (
-                  <tr
-                    key={dept.id}
-                    style={{
-                      borderBottom:
-                        idx !== filteredDepartments.length - 1
-                          ? "1px solid #f3f4f6"
-                          : "none",
-                    }}
-                  >
-                    <td
-                      onClick={() => {
-                        setSelectedDepartmentForDetail(dept);
-                        setShowDepartmentDetailModal(true);
-                      }}
-                      style={tdClickable}
-                    >
-                      {dept.name}
-                    </td>
-
-                    <td
-                      onClick={() => {
-                        setSelectedDepartmentForDetail(dept);
-                        setShowDepartmentDetailModal(true);
-                      }}
-                      style={tdClickableSecondary}
-                    >
-                      {dept.employees}
-                    </td>
-
-                    <td style={{ padding: "16px 12px" }}>
-                      <div style={{ display: "flex", gap: "8px" }}>
-
-                        {/* EDIT */}
-                        <button
-                          onClick={() => {
-                            setEditingDepartment(dept);
-                            setEditDepartmentFormData({
-                              nombre: dept.name,
-                              descripcion: dept.description || "",
-                            });
-                            setEditDepartmentMembers(dept.members || []);
-                            setShowEditDepartmentModal(true);
-                          }}
-                          style={iconBtn}
-                          title="Editar departamento"
-                        >
-                          <Edit size={16} />
-                        </button>
-
-                        {/* DELETE */}
-                        <button
-                          onClick={() => {
-                            if (window.confirm("¿Eliminar departamento?")) {
-                              deleteDepartment(dept.id);
-                            }
-                          }}
-                          style={{ ...iconBtn, color: "#ef4444" }}
-                          title="Eliminar departamento"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* EMPTY */}
-          {filteredDepartments.length === 0 && (
+          {/* CONTENT */}
+          {filteredDepartments.length === 0 ? (
             <div
               style={{
+                minHeight: "420px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 textAlign: "center",
                 padding: "40px 20px",
-                color: "#6b7280",
               }}
             >
-              No hay departamentos
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    backgroundColor: "#f3f4f6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Search size={28} color="#9ca3af" />
+                </div>
+
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "600",
+                      color: "#111827",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    {allDepartments.length === 0
+                      ? "No hay departamentos registrados"
+                      : "No se encontraron departamentos"}
+                  </h3>
+
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      marginBottom: 0,
+                    }}
+                  >
+                    {allDepartments.length === 0
+                      ? "Crea tu primer departamento para comenzar."
+                      : "Prueba con otros términos de búsqueda."}
+                  </p>
+                </div>
+              </div>
             </div>
+          ) : (
+            <>
+              {/* SEARCH */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre..."
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                    maxWidth: "300px",
+                  }}
+                  value={departmentSearchQuery}
+                  onChange={(e) => setDepartmentSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* TABLE */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <th style={thStyle}>NOMBRE DEL DEPARTAMENTO</th>
+                      <th style={thStyle}>Nº DE EMPLEADOS</th>
+
+                      {currentUser?.rol === "Admin" && (
+                        <th style={thStyle}>ACCIONES</th>
+                      )}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredDepartments.map((dept, idx) => (
+                      <tr
+                        key={dept.id}
+                        style={{
+                          borderBottom:
+                            idx !== filteredDepartments.length - 1
+                              ? "1px solid #f3f4f6"
+                              : "none",
+                        }}
+                      >
+                        <td
+                          onClick={() => {
+                            setSelectedDepartmentForDetail(dept);
+                            setShowDepartmentDetailModal(true);
+                          }}
+                          style={tdClickable}
+                        >
+                          {dept.name}
+                        </td>
+
+                        <td
+                          onClick={() => {
+                            setSelectedDepartmentForDetail(dept);
+                            setShowDepartmentDetailModal(true);
+                          }}
+                          style={tdClickableSecondary}
+                        >
+                          {dept.employees}
+                        </td>
+
+                        {currentUser?.rol === "Admin" && (
+                          <td style={{ padding: "16px 12px" }}>
+                            <div style={{ display: "flex", gap: "8px" }}>
+
+                              {/* EDIT */}
+                              <button
+                                onClick={() => {
+                                  setEditingDepartment(dept);
+                                  setEditDepartmentFormData({
+                                    nombre: dept.name,
+                                    descripcion: dept.description || "",
+                                  });
+                                  setEditDepartmentMembers(dept.members || []);
+                                  setShowEditDepartmentModal(true);
+                                }}
+                                style={iconBtn}
+                                title="Editar departamento"
+                              >
+                                <Edit size={16} />
+                              </button>
+
+                              {/* DELETE */}
+                              <button
+                                onClick={() => {
+                                  if (window.confirm("¿Eliminar departamento?")) {
+                                    deleteDepartment(dept.id);
+                                  }
+                                }}
+                                style={{ ...iconBtn, color: "#ef4444" }}
+                                title="Eliminar departamento"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
         </div>
@@ -369,117 +443,206 @@ export default function Departments({
                   >
                     Asignar Miembros
                   </label>
+
                   <div
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                      padding: "10px 12px",
-                      borderRadius: "6px",
-                      borderColor: "#e5e7eb",
-                      border: "1px solid #e5e7eb",
-                      backgroundColor: "#f9fafb",
-                      minHeight: "44px",
-                      alignItems: "center",
+                      position: "relative",
                     }}
                   >
-                    {departmentMembers.map((member) => (
-                      <div
-                        key={member}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          backgroundColor: "#dbeafe",
-                          color: "#1e40af",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {member}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDepartmentMembers(
-                              departmentMembers.filter((m) => m !== member),
-                            )
-                          }
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#1e40af",
-                            fontSize: "16px",
-                            padding: "0",
-                            marginLeft: "2px",
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <input
-                      type="text"
-                      placeholder={
-                        departmentMembers.length === 0
-                          ? "Buscar usuarios..."
-                          : ""
-                      }
-                      className="form-control"
+                    <div
                       style={{
-                        border: "none",
-                        outline: "none",
-                        padding: "0",
-                        fontSize: "14px",
-                        flex: "1",
-                        minWidth: "150px",
-                        backgroundColor: "transparent",
-                      }}
-                      value={memberSearch}
-                      onChange={(e) => setMemberSearch(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          memberSearch.trim() &&
-                          !departmentMembers.includes(memberSearch.trim())
-                        ) {
-                          e.preventDefault();
-                          setDepartmentMembers([
-                            ...departmentMembers,
-                            memberSearch.trim(),
-                          ]);
-                          setMemberSearch("");
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          memberSearch.trim() &&
-                          !departmentMembers.includes(memberSearch.trim())
-                        ) {
-                          setDepartmentMembers([
-                            ...departmentMembers,
-                            memberSearch.trim(),
-                          ]);
-                          setMemberSearch("");
-                        }
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#6b7280",
-                        padding: "4px 8px",
                         display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        padding: "10px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        minHeight: "44px",
                         alignItems: "center",
                       }}
                     >
-                      <Search size={18} />
-                    </button>
+                      {departmentMembers.map((member) => (
+                        <div
+                          key={member}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {member}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDepartmentMembers(
+                                departmentMembers.filter(
+                                  (m) => m !== member,
+                                ),
+                              )
+                            }
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "#1e40af",
+                              fontSize: "16px",
+                              padding: 0,
+                              marginLeft: "2px",
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+
+                      <input
+                        type="text"
+                        placeholder={
+                          departmentMembers.length === 0
+                            ? "Buscar usuarios..."
+                            : ""
+                        }
+                        className="form-control"
+                        style={{
+                          border: "none",
+                          outline: "none",
+                          padding: 0,
+                          fontSize: "14px",
+                          flex: 1,
+                          minWidth: "150px",
+                          backgroundColor: "transparent",
+                          boxShadow: "none",
+                        }}
+                        value={memberSearch}
+                        onChange={(e) =>
+                          setMemberSearch(e.target.value)
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "4px",
+                        }}
+                      >
+                        <Search size={18} />
+                      </button>
+                    </div>
+
+                    {/* DROPDOWN */}
+                    {memberSearch &&
+                      filteredUsers.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            marginTop: "6px",
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow:
+                              "0 10px 25px rgba(0,0,0,0.08)",
+                            zIndex: 50,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {filteredUsers.map((user) => {
+                            const fullName =
+                              `${user.nombre} ${user.apellido}`;
+
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                onClick={() => {
+                                  setDepartmentMembers([
+                                    ...departmentMembers,
+                                    fullName,
+                                  ]);
+
+                                  setMemberSearch("");
+                                }}
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  background: "white",
+                                  padding: "10px 12px",
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "#f9fafb")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "white")
+                                }
+                              >
+                                <div
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#dbeafe",
+                                    color: "#2563eb",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: "700",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {user.nombre.charAt(0)}
+                                  {user.apellido.charAt(0)}
+                                </div>
+
+                                <div>
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: "14px",
+                                      fontWeight: "500",
+                                      color: "#111827",
+                                    }}
+                                  >
+                                    {fullName}
+                                  </p>
+
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: "12px",
+                                      color: "#6b7280",
+                                    }}
+                                  >
+                                    {user.departamento}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                   </div>
                 </div>
 

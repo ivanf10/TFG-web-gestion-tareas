@@ -1,0 +1,328 @@
+import { useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+
+export default function Login({
+    onShowRegister,
+}) {
+  const { login } = useAuth();
+
+  const [formData, setFormData] = useState({
+    email: "",
+    contrasena: "",
+  });
+
+  const [errors, setErrors] = useState({});
+
+  const handleLogin = () => {
+    const newErrors = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Introduce un email";
+    }
+
+    if (!formData.contrasena.trim()) {
+      newErrors.contrasena =
+        "Introduce una contraseña";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    const result = login(
+      formData.email,
+      formData.contrasena,
+    );
+
+    if (!result.success) {
+      setErrors({
+        general: result.message,
+      });
+
+      return;
+    }
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f9fafb",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}
+    >
+      <div
+        className="card border-0"
+        style={{
+          width: "100%",
+          maxWidth: "460px",
+          borderRadius: "20px",
+          boxShadow:
+            "0 10px 40px rgba(0,0,0,0.08)",
+        }}
+      >
+        <div className="card-body p-4 p-md-5">
+          {/* LOGO */}
+          <div className="text-center mb-4">
+            <div
+              className="d-flex align-items-center justify-content-center gap-3 mb-3"
+            >
+              <img
+                src="/logo.png"
+                alt="OPTI TASK"
+                style={{
+                  width: "80px",
+                  height: "80px",
+                }}
+              />
+
+              <div>
+                <h1
+                  style={{
+                    fontSize: "34px",
+                    fontWeight: "700",
+                    marginBottom: "2px",
+                    fontFamily:
+                      "Dela Gothic One",
+                    whiteSpace: "nowrap",
+                    color: "#111827",
+                  }}
+                >
+                  OPTI TASK
+                </h1>
+
+                <p
+                  style={{
+                    fontSize: "18px",
+                    color: "#6b7280",
+                    marginBottom: 0,
+                  }}
+                >
+                  Gestión de Tareas
+                </p>
+              </div>
+            </div>
+
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#111827",
+                marginBottom: "6px",
+              }}
+            >
+              Iniciar Sesión
+            </h2>
+
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6b7280",
+                marginBottom: 0,
+              }}
+            >
+              Accede a tu cuenta para continuar
+            </p>
+          </div>
+
+          {/* ERROR */}
+          {errors.general && (
+            <div
+              style={{
+                padding: "12px",
+                backgroundColor: "#fee2e2",
+                color: "#dc2626",
+                borderRadius: "8px",
+                fontSize: "14px",
+                marginBottom: "20px",
+              }}
+            >
+              {errors.general}
+            </div>
+          )}
+
+          {/* EMAIL */}
+          <div className="mb-3">
+            <label
+              style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#111827",
+                display: "block",
+                marginBottom: "8px",
+              }}
+            >
+              Correo Electrónico
+            </label>
+
+            <input
+              type="email"
+              className="form-control"
+              placeholder="Ej. admin@optitask.com"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  email: e.target.value,
+                })
+              }
+              style={{
+                borderRadius: "8px",
+                borderColor: errors.email
+                  ? "#ef4444"
+                  : "#e5e7eb",
+                fontSize: "14px",
+                padding: "12px",
+              }}
+            />
+
+            {errors.email && (
+              <p
+                style={{
+                  color: "#ef4444",
+                  fontSize: "12px",
+                  marginTop: "6px",
+                  marginBottom: 0,
+                }}
+              >
+                {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* PASSWORD */}
+          <div className="mb-4">
+            <label
+              style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#111827",
+                display: "block",
+                marginBottom: "8px",
+              }}
+            >
+              Contraseña
+            </label>
+
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Tu contraseña"
+              value={formData.contrasena}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  contrasena: e.target.value,
+                })
+              }
+              style={{
+                borderRadius: "8px",
+                borderColor: errors.contrasena
+                  ? "#ef4444"
+                  : "#e5e7eb",
+                fontSize: "14px",
+                padding: "12px",
+              }}
+            />
+
+            {errors.contrasena && (
+              <p
+                style={{
+                  color: "#ef4444",
+                  fontSize: "12px",
+                  marginTop: "6px",
+                  marginBottom: 0,
+                }}
+              >
+                {errors.contrasena}
+              </p>
+            )}
+          </div>
+
+          {/* LOGIN BUTTON */}
+          <button
+            onClick={handleLogin}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "none",
+              borderRadius: "8px",
+              backgroundColor: "#2563eb",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            Entrar
+          </button>
+
+          <button
+            onClick={onShowRegister}
+            style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                backgroundColor: "white",
+                color: "#4b5563",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: "pointer",
+                marginTop: "12px",
+            }}
+            >
+            Crear Cuenta
+            </button>
+
+          {/* DEMO */}
+          <div
+            style={{
+              marginTop: "24px",
+              padding: "14px",
+              backgroundColor: "#f9fafb",
+              borderRadius: "10px",
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "#111827",
+                marginBottom: "6px",
+              }}
+            >
+              Cuenta Demo
+            </p>
+
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6b7280",
+                marginBottom: "4px",
+              }}
+            >
+              admin@optitask.com
+            </p>
+
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6b7280",
+                marginBottom: 0,
+              }}
+            >
+              123456
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

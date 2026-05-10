@@ -5,10 +5,13 @@ import Home from "../../pages/Home";
 import Tasks from "../../pages/Tasks";
 import Departments from "../../pages/Departments";
 import Notes from "../../pages/Notes";
+import Users from "../../pages/Users";
+import Account from "../../pages/Account";
 
 import { useTasks } from "../../hooks/useTasks";
 import { useDepartments } from "../../hooks/useDepartments";
 import { useNotes } from "../../hooks/useNotes";
+import { useUsers } from "../../hooks/useUsers";
 
 export default function Layout() {
   const [activeView, setActiveView] = useState("inicio");
@@ -67,6 +70,41 @@ export default function Layout() {
     imageUrl: "",
   });
 
+  const {
+    allUsers,
+    addUser,
+    updateUser,
+    deleteUser,
+  } = useUsers();
+
+  // UI USERS
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [selectedUserForDetail, setSelectedUserForDetail] =useState(null);
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+
+  const [editUserFormData, setEditUserFormData] =
+    useState({
+      nombre: "",
+      apellido: "",
+      email: "",
+      departamento: "",
+      rol: "",
+    });
+
+  // ACCOUNT
+  const [isEditingAccount, setIsEditingAccount] =
+    useState(false);
+
+  const [accountData, setAccountData] = useState({
+    nombre: "Carlos",
+    apellido: "Rodríguez",
+    email: "carlos.rodriguez@company.com",
+    departamento: "Ingeniería",
+    rol: "Admin",
+  });
+
   // RENDER
   return (
     <div className="d-flex">
@@ -123,6 +161,7 @@ export default function Layout() {
         {activeView === "departamentos" && (
           <Departments
             allDepartments={allDepartments}
+            allUsers={allUsers}
             addDepartment={addDepartment}
             updateDepartment={updateDepartment}
             deleteDepartment={deleteDepartment}
@@ -158,6 +197,47 @@ export default function Layout() {
             setEditNoteFormData={setEditNoteFormData}
 
             setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
+
+        {/* USERS */}
+        {activeView === "usuarios" && (
+          <Users
+            allUsers={allUsers}
+
+            addUser={addUser}
+            updateUser={updateUser}
+            deleteUser={deleteUser}
+
+            allDepartments={allDepartments}
+
+            showAddUserModal={showAddUserModal}
+            setShowAddUserModal={setShowAddUserModal}
+
+            editingUser={editingUser}
+            setEditingUser={setEditingUser}
+
+            showEditUserModal={showEditUserModal}
+            setShowEditUserModal={setShowEditUserModal}
+
+            selectedUserForDetail={selectedUserForDetail}
+            setSelectedUserForDetail={setSelectedUserForDetail}
+
+            showUserDetailModal={showUserDetailModal}
+            setShowUserDetailModal={setShowUserDetailModal}
+
+            editUserFormData={editUserFormData}
+            setEditUserFormData={setEditUserFormData}
+
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
+
+        {/* ACCOUNT */}
+        {activeView === "cuenta" && (
+          <Account
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+            allDepartments={allDepartments}
           />
         )}
       </main>

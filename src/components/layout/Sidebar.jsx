@@ -1,5 +1,6 @@
 import React from "react";
 import SidebarContent from "./SidebarContent";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function Sidebar({
   activeView,
@@ -7,11 +8,16 @@ export default function Sidebar({
   isMobileOpen,
   setIsMobileOpen,
 }) {
+
+  const { currentUser } = useAuth();
+
   const menuItems = [
     { key: "inicio", label: "Inicio" },
     { key: "tareas", label: "Tareas" },
     { key: "notas", label: "Notas" },
     { key: "departamentos", label: "Departamentos" },
+    { key: "usuarios", label: "Usuarios" },
+    { key: "cuenta", label: "Mi Cuenta" },
   ];
 
   const handleClick = (view) => {

@@ -1,13 +1,20 @@
+import { useAuth } from "../../context/AuthContext";
+
 export default function SidebarContent({
   activeView,
   onClick,
   closeMobile,
 }) {
+
+  const { currentUser } = useAuth();
+
   const menuItems = [
     { key: "inicio", label: "Inicio" },
     { key: "tareas", label: "Tareas" },
     { key: "notas", label: "Notas" },
     { key: "departamentos", label: "Departamentos" },
+    { key: "usuarios", label: "Usuarios" },
+    { key: "cuenta", label: "Mi Cuenta" },
   ];
 
   return (
@@ -64,11 +71,12 @@ export default function SidebarContent({
           }}
           className="w-100 btn text-start d-flex align-items-center gap-2 mb-2"
           style={{
-            backgroundColor:
-              activeView === "inicio" ? "#eff6ff" : "transparent",
             color: activeView === "inicio" ? "#2563eb" : "#4b5563",
             fontWeight: "500",
             fontSize: "15px",
+            backgroundColor:
+              activeView === "inicio" ? "#eff6ff" : "transparent",
+            border: "none",
             padding: "10px 12px",
           }}
         >
@@ -182,36 +190,87 @@ export default function SidebarContent({
           </svg>
           Departamentos
         </button>
+
+        {currentUser?.rol === "Admin" && (  
+        <button
+          onClick={() => {
+            onClick("usuarios");
+            closeMobile?.();
+          }}
+          className="w-100 btn text-start d-flex align-items-center gap-2 mb-2"
+          style={{
+            color: activeView === "usuarios" ? "#2563eb" : "#4b5563",
+            fontWeight: "500",
+            fontSize: "15px",
+            backgroundColor:
+              activeView === "usuarios" ? "#eff6ff" : "transparent",
+            border: "none",
+            padding: "10px 12px",
+          }}
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10 10c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm4.5 2h-1.59c-.645.635-1.531 1-2.41 1s-1.765-.365-2.41-1H5.5C3.57 12 2 13.57 2 15.5v1.5c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-1.5C18 13.57 16.43 12 14.5 12z"
+              fill="currentColor"
+            />
+          </svg>
+
+          Usuarios
+        </button>
+        )}
       </nav>
 
       <div
-        className="px-3 mt-auto border-top border-1"
-        style={{ borderColor: "#e5e7eb" }}
-      >
-        <button
-          className="w-100 btn text-start d-flex align-items-center gap-2"
-          style={{
-            color: "#4b5563",
-            fontWeight: "500",
-            fontSize: "15px",
-            backgroundColor: "transparent",
-            border: "none",
-            padding: "10px 12px",
-            margin: "16px 0",
-          }}
+          className="px-3 mt-auto border-top border-1"
+          style={{ borderColor: "#e5e7eb" }}
         >
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
-            <path
-              d="M4 17c0-2.5 2.5-5 6-5s6 2.5 6 5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          Cuenta
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              onClick("cuenta");
+              closeMobile?.();
+            }}
+            className="w-100 btn text-start d-flex align-items-center gap-2"
+            style={{
+              color: activeView === "cuenta" ? "#2563eb" : "#4b5563",
+              fontWeight: "500",
+              fontSize: "15px",
+              backgroundColor: activeView === "cuenta" ? "#eff6ff" : "transparent",
+              border: "none",
+              padding: "10px 12px",
+              margin: "16px 0",
+            }}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="10"
+                cy="7"
+                r="3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+              />
+              <path
+                d="M4 17c0-2.5 2.5-5 6-5s6 2.5 6 5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            Cuenta
+          </button>
+        </div>
     </div>
   );
 }

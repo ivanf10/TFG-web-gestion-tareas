@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { ClipboardList } from "lucide-react";
 
 export default function Tasks({
   allTasks,
@@ -16,11 +18,24 @@ export default function Tasks({
   updateTask,
   deleteTask
 }) {
+
+  const { currentUser } = useAuth();
+
+  const visibleTasks =
+    currentUser?.rol === "Admin"
+      ? allTasks
+      : allTasks.filter(
+          (task) =>
+            task.assignedTo ===
+            `${currentUser.nombre} ${currentUser.apellido}`,
+        );
+
   // Buscador y filtros
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
 
   // Formulario de nueva tarea
   const [newTask, setNewTask] = useState({
@@ -57,7 +72,7 @@ export default function Tasks({
   const tasksPerPage = 5;
 
   // Filtrado dinámico
-  const filteredTasks = allTasks.filter((task) => {
+  let filtered = visibleTasks.filter((task) => {
     const realStatus = getTaskStatus(task);
 
     const matchesSearch = task.title
@@ -68,10 +83,12 @@ export default function Tasks({
       !statusFilter || realStatus === statusFilter;
 
     const matchesDepartment =
-      !departmentFilter || task.department === departmentFilter;
+      !departmentFilter ||
+      task.department === departmentFilter;
 
     const matchesUser =
-      !userFilter || task.assignedTo === userFilter;
+      !userFilter ||
+      task.assignedTo === userFilter;
 
     return (
       matchesSearch &&
@@ -81,12 +98,32 @@ export default function Tasks({
     );
   });
 
+  // ORDEN FECHA
+  if (dateFilter === "recent") {
+    filtered = [...filtered].sort(
+      (a, b) =>
+        new Date(b.creationDate) -
+        new Date(a.creationDate),
+    );
+  }
+
+  if (dateFilter === "oldest") {
+    filtered = [...filtered].sort(
+      (a, b) =>
+        new Date(a.creationDate) -
+        new Date(b.creationDate),
+    );
+  }
+
+  const filteredTasks = filtered;
+
   const indexOfLastTask = currentPage * tasksPerPage;
-  const indexOfFirstTask = indexOfLastTask - tasksPerPage;
+  const indexOfFirstTask =
+    indexOfLastTask - tasksPerPage;
 
   const currentTasks = filteredTasks.slice(
     indexOfFirstTask,
-    indexOfLastTask
+    indexOfLastTask,
   );
 
   // 4. RESET AL FILTRAR
@@ -159,182 +196,310 @@ export default function Tasks({
         style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
       >
         <div className="card-body p-3 p-md-4">
-          <div className="d-flex gap-2 mb-3">
-            <input
-              type="text"
-              placeholder="Buscar por título de tarea"
-              className="form-control"
+          {visibleTasks.length === 0 ? (
+            <div
               style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
-              }}
-              value={taskSearchQuery}
-              onChange={(e) => setTaskSearchQuery(e.target.value)}
-            />
-
-            <select
-              className="form-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
-                maxWidth: "150px",
+                minHeight: "420px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "40px 20px",
               }}
             >
-              <option value="">Estado</option>
-              <option>Pendiente</option>
-              <option>Completada</option>
-              <option>Atrasada</option>
-            </select>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    backgroundColor: "#f3f4f6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  <ClipboardList size={30} strokeWidth={1.8} />
+                </div>
 
-            <select
-              className="form-select"
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
-                maxWidth: "150px",
-              }}
-            >
-              <option value="">Departamento</option>
-              <option>Diseño</option>
-              <option>Ingeniería</option>
-              <option>Ventas</option>
-              <option>Marketing</option>
-              <option>Recursos Humanos</option>
-            </select>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "600",
+                      color: "#111827",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    No hay tareas registradas
+                  </h3>
 
-            <select
-              className="form-select"
-              value={userFilter}
-              onChange={(e) => setUserFilter(e.target.value)}
-              style={{
-                borderRadius: "6px",
-                borderColor: "#e5e7eb",
-                fontSize: "14px",
-                maxWidth: "150px",
-              }}
-            >
-              <option value="">Usuario</option>
-              <option>Ana García</option>
-              <option>Carlos Ruiz</option>
-              <option>Laura Méndez</option>
-              <option>Pedro Jiménez</option>
-              <option>Sofía Castillo</option>
-            </select>
-          </div>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      marginBottom: 0,
+                    }}
+                  >
+                    Crea una nueva tarea para comenzar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="d-flex gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Buscar por título de tarea"
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                  }}
+                  value={taskSearchQuery}
+                  onChange={(e) => setTaskSearchQuery(e.target.value)}
+                />
 
-          <div
-            className="table-responsive"
-            style={{ maxHeight: "500px", overflowY: "auto" }}
-          >
-            <table className="table table-hover mb-0">
-              <thead>
-                <tr style={{ borderBottomColor: "#e5e7eb" }}>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Título de la Tarea
-                  </th>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Departamento
-                  </th>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Asignado a
-                  </th>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Fecha Límite
-                  </th>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Estado
-                  </th>
-                  <th style={{ fontSize: "14px", fontWeight: "600", color: "#4b5563" }}>
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
+                <select
+                  className="form-select"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                    maxWidth: "150px",
+                  }}
+                >
+                  <option value="">Fecha</option>
+                  <option value="recent">Recientes</option>
+                  <option value="oldest">Antiguas</option>
+                </select>
 
-              <tbody>
-                {currentTasks.map((task) => {
-                  const status = getTaskStatus(task);
+                <select
+                  className="form-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                    maxWidth: "150px",
+                  }}
+                >
+                  <option value="">Estado</option>
+                  <option>Pendiente</option>
+                  <option>Completada</option>
+                  <option>Atrasada</option>
+                </select>
 
-                  return (
-                    <tr
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      style={{
-                        borderBottomColor: "#e5e7eb",
-                        height: "60px",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#f9fafb")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
-                    >
-                      <td style={{ fontSize: "14px", fontWeight: "500", color: "#111827" }}>
-                        {task.title}
-                      </td>
+                <select
+                  className="form-select"
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                    maxWidth: "150px",
+                  }}
+                >
+                  <option value="">Departamento</option>
+                  <option>Diseño</option>
+                  <option>Ingeniería</option>
+                  <option>Ventas</option>
+                  <option>Marketing</option>
+                  <option>Recursos Humanos</option>
+                </select>
 
-                      <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                        {task.department}
-                      </td>
+                <select
+                  className="form-select"
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value)}
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: "#e5e7eb",
+                    fontSize: "14px",
+                    maxWidth: "150px",
+                  }}
+                >
+                  <option value="">Usuario</option>
+                  <option>Ana García</option>
+                  <option>Carlos Ruiz</option>
+                  <option>Laura Méndez</option>
+                  <option>Pedro Jiménez</option>
+                  <option>Sofía Castillo</option>
+                </select>
+              </div>
 
-                      <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                        {task.assignedTo}
-                      </td>
+              <div
+                className="table-responsive"
+                style={{ maxHeight: "500px", overflowY: "auto" }}
+              >
+                <table className="table table-hover mb-0">
+                  <thead>
+                    <tr style={{ borderBottomColor: "#e5e7eb" }}>
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Título de la Tarea
+                      </th>
 
-                      <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                        {task.dueDate}
-                      </td>
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Departamento
+                      </th>
 
-                      <td style={{ fontSize: "14px" }}>
-                        <span
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Asignado a
+                      </th>
+
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Fecha Límite
+                      </th>
+
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Estado
+                      </th>
+
+                      <th
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#4b5563",
+                        }}
+                      >
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {currentTasks.map((task) => {
+                      const status = getTaskStatus(task);
+
+                      return (
+                        <tr
+                          key={task.id}
+                          onClick={() => setSelectedTask(task)}
                           style={{
-                            display: "inline-block",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
-                            fontWeight: "500",
-                            backgroundColor:
-                              status === "Pendiente"
-                                ? "#fef3c7"
-                                : status === "Completada"
-                                ? "#dcfce7"
-                                : "#fee2e2",
-                            color:
-                              status === "Pendiente"
-                                ? "#ca8a04"
-                                : status === "Completada"
-                                ? "#15803d"
-                                : "#dc2626",
+                            borderBottomColor: "#e5e7eb",
+                            height: "60px",
+                            cursor: "pointer",
                           }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#f9fafb")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "transparent")
+                          }
                         >
-                          ● {status}
-                        </span>
-                      </td>
+                          <td
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              color: "#111827",
+                            }}
+                          >
+                            {task.title}
+                          </td>
 
-                      <td style={{ fontSize: "14px", borderColor: "#e5e7eb" }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingTask(task);
-                            setEditFormData({
-                              titulo: task.title,
-                              descripcion: task.description,
-                              departamento: task.department,
-                              fechaLimite: task.dueDate,
-                              estado: status,
-                              asignarA: task.assignedTo,
-                            });
-                            setShowEditModal(true);
-                          }}
-                          className="btn btn-sm"
+                          <td style={{ fontSize: "14px", color: "#4b5563" }}>
+                            {task.department}
+                          </td>
+
+                          <td style={{ fontSize: "14px", color: "#4b5563" }}>
+                            {task.assignedTo}
+                          </td>
+
+                          <td style={{ fontSize: "14px", color: "#4b5563" }}>
+                            {task.dueDate}
+                          </td>
+
+                          <td style={{ fontSize: "14px" }}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                backgroundColor:
+                                  status === "Pendiente"
+                                    ? "#fef3c7"
+                                    : status === "Completada"
+                                    ? "#dcfce7"
+                                    : "#fee2e2",
+                                color:
+                                  status === "Pendiente"
+                                    ? "#ca8a04"
+                                    : status === "Completada"
+                                    ? "#15803d"
+                                    : "#dc2626",
+                              }}
+                            >
+                              ● {status}
+                            </span>
+                          </td>
+
+                          <td
+                            style={{
+                              fontSize: "14px",
+                              borderColor: "#e5e7eb",
+                            }}
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTask(task);
+                                setEditFormData({
+                                  titulo: task.title,
+                                  descripcion: task.description,
+                                  departamento: task.department,
+                                  fechaLimite: task.dueDate,
+                                  estado: status,
+                                  asignarA: task.assignedTo,
+                                });
+                                setShowEditModal(true);
+                              }}
+                              className="btn btn-sm"
                               style={{
                                 padding: "4px",
                                 backgroundColor: "transparent",
@@ -357,93 +522,107 @@ export default function Tasks({
                                   strokeLinejoin="round"
                                 />
                               </svg>
-                        </button>
+                            </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
 
-                            if (window.confirm("¿Seguro que quieres eliminar esta tarea?")) {
-                              deleteTask(task.id);
-                            }
-                          }}
-                          className="btn btn-sm"
-                          style={{
-                            padding: "4px",
-                            backgroundColor: "transparent",
-                            border: "none",
-                            color: "#dc2626",
-                          }}
-                        >
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                                if (
+                                  window.confirm(
+                                    "¿Seguro que quieres eliminar esta tarea?"
+                                  )
+                                ) {
+                                  deleteTask(task.id);
+                                }
+                              }}
+                              className="btn btn-sm"
+                              style={{
+                                padding: "4px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#dc2626",
+                              }}
+                            >
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M3 6h14M8 10v4M12 10v4M4 6l1.5 10.5a2 2 0 002 1.5h5a2 2 0 002-1.5L16 6M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-          <div
-            className="d-flex align-items-center justify-content-between mt-3"
-            style={{ fontSize: "14px", color: "#6b7280" }}
-          >
-            <p style={{ marginBottom: "0" }}>
-              Mostrando {indexOfFirstTask + 1} a{" "}
-              {Math.min(indexOfLastTask, filteredTasks.length)} de{" "}
-              {filteredTasks.length} resultados
-            </p>
-
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "transparent",
-                  border: "1px solid #e5e7eb",
-                  color: "#4b5563",
-                  borderRadius: "6px",
-                }}
+              <div
+                className="d-flex align-items-center justify-content-between mt-3"
+                style={{ fontSize: "14px", color: "#6b7280" }}
               >
-                &lsaquo;
-              </button>
-              <button
-                className="btn btn-sm"
-                onClick={() =>
-                  setCurrentPage((prev) =>
-                    indexOfLastTask < filteredTasks.length ? prev + 1 : prev
-                  )
-                }
-                disabled={indexOfLastTask >= filteredTasks.length}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "transparent",
-                  border: "1px solid #e5e7eb",
-                  color: "#4b5563",
-                  borderRadius: "6px",
-                }}
-              >
-                &rsaquo;
-              </button>
-            </div>
-          </div>
+                <p style={{ marginBottom: "0" }}>
+                  Mostrando {indexOfFirstTask + 1} a{" "}
+                  {Math.min(indexOfLastTask, filteredTasks.length)} de{" "}
+                  {filteredTasks.length} resultados
+                </p>
+
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "transparent",
+                      border: "1px solid #e5e7eb",
+                      color: currentPage === 1 ? "#d1d5db" : "#4b5563",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    &lsaquo;
+                  </button>
+
+                  <button
+                    className="btn btn-sm"
+                    onClick={() =>
+                      setCurrentPage((prev) =>
+                        indexOfLastTask < filteredTasks.length
+                          ? prev + 1
+                          : prev
+                      )
+                    }
+                    disabled={indexOfLastTask >= filteredTasks.length}
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "transparent",
+                      border: "1px solid #e5e7eb",
+                      color:
+                        indexOfLastTask >= filteredTasks.length
+                          ? "#d1d5db"
+                          : "#4b5563",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    &rsaquo;
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -687,25 +866,50 @@ export default function Tasks({
                       >
                         Asignar a
                       </label>
+
                       <select
                         className="form-select"
+                        disabled={currentUser?.rol !== "Admin"}
                         style={{
                           borderRadius: "6px",
                           borderColor: "#e5e7eb",
                           fontSize: "14px",
                           padding: "10px 12px",
+                          backgroundColor:
+                            currentUser?.rol !== "Admin"
+                              ? "#f3f4f6"
+                              : "white",
+                          cursor:
+                            currentUser?.rol !== "Admin"
+                              ? "not-allowed"
+                              : "pointer",
                         }}
-                        value={newTask.asignarA}
+                        value={
+                          currentUser?.rol === "Admin"
+                            ? newTask.asignarA
+                            : `${currentUser.nombre} ${currentUser.apellido}`
+                        }
                         onChange={(e) =>
-                          setNewTask({ ...newTask, asignarA: e.target.value })
+                          setNewTask({
+                            ...newTask,
+                            asignarA: e.target.value,
+                          })
                         }
                       >
                         <option value="">Seleccionar usuario...</option>
+
                         <option value="Ana García">Ana García</option>
                         <option value="Carlos Ruiz">Carlos Ruiz</option>
                         <option value="Laura Méndez">Laura Méndez</option>
                         <option value="Pedro Jiménez">Pedro Jiménez</option>
                         <option value="Sofía Castillo">Sofía Castillo</option>
+
+                        {/* Usuario actual */}
+                        <option
+                          value={`${currentUser?.nombre} ${currentUser?.apellido}`}
+                        >
+                          {currentUser?.nombre} {currentUser?.apellido}
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -781,7 +985,12 @@ export default function Tasks({
                           description: newTask.descripcion,
                           department: newTask.departamento,
                           dueDate: newTask.fechaLimite,
-                          assignedTo: newTask.asignarA,
+
+                          assignedTo:
+                            currentUser?.rol === "Admin"
+                              ? newTask.asignarA
+                              : `${currentUser.nombre} ${currentUser.apellido}`,
+
                           completed: newTask.estado === "Completada",
                           recordatorio: newTask.recordatorio,
                         });
@@ -978,7 +1187,7 @@ export default function Tasks({
                     </div>
                   </div>
 
-                  {/* INFO (SIN AVATAR) */}
+                  {/* INFO */}
                   <div className="row g-3 mb-4">
                     <div className="col-6">
                       <h3
@@ -994,26 +1203,53 @@ export default function Tasks({
                         Asignado a
                       </h3>
 
-                      <div>
-                        <p
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
                           style={{
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: "#111827",
-                            marginBottom: "2px",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            backgroundColor: "#e5e7eb",
+                            color: "#4b5563",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            fontWeight: "700",
+                            flexShrink: 0,
                           }}
                         >
-                          {selectedTask.assignedTo}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#6b7280",
-                            marginBottom: 0,
-                          }}
-                        >
-                          {selectedTask.department}
-                        </p>
+                          {selectedTask.assignedTo?.charAt(0)?.toUpperCase()}
+                        </div>
+
+                        <div>
+                          <p
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              color: "#111827",
+                              marginBottom: "2px",
+                            }}
+                          >
+                            {selectedTask.assignedTo}
+                          </p>
+
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "#6b7280",
+                              marginBottom: 0,
+                            }}
+                          >
+                            {selectedTask.department}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1031,26 +1267,55 @@ export default function Tasks({
                         Creado por
                       </h3>
 
-                      <div>
-                        <p
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
                           style={{
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: "#111827",
-                            marginBottom: "2px",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            backgroundColor: "#e5e7eb",
+                            color: "#4b5563",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            fontWeight: "700",
+                            flexShrink: 0,
                           }}
                         >
-                          {selectedTask.createdBy || "Admin"}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#6b7280",
-                            marginBottom: 0,
-                          }}
-                        >
-                          Admin
-                        </p>
+                          {(selectedTask.createdBy || "Admin")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+
+                        <div>
+                          <p
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              color: "#111827",
+                              marginBottom: "2px",
+                            }}
+                          >
+                            {selectedTask.createdBy || "Carlos Rodríguez"}
+                          </p>
+
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "#6b7280",
+                              marginBottom: 0,
+                            }}
+                          >
+                            Admin
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

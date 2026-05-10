@@ -1,5 +1,6 @@
 import { useAppState } from "../hooks/useAppState";
 import Header from "../components/layout/Header";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
   const {
@@ -12,17 +13,35 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
     nextMonth,
   } = useAppState();
 
-  // Tareas del día seleccionado (esto sigue como lo tienes)
-  const tasks = allTasks.filter(
-    (t) => t.date === selectedDate
-  );
+  const { currentUser } = useAuth();
+
+  const visibleTasks =
+  currentUser?.rol === "Admin"
+    ? allTasks
+    : allTasks.filter(
+        (task) =>
+          task.assignedTo ===
+          `${currentUser.nombre} ${currentUser.apellido}`,
+      );
+
+  // Tareas del día seleccionado
+  const tasks = visibleTasks.filter((task) => {
+    if (!task.dueDate) return false;
+
+    const taskDate = new Date(task.dueDate);
+
+    return (
+      taskDate.toDateString() ===
+      selectedDate.toDateString()
+    );
+  });
 
   // Fecha de hoy (sin horas)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // Tareas atrasadas (lógica correcta)
-  const lateTasksCount = allTasks.filter((t) => {
+  const lateTasksCount = visibleTasks.filter((t) => {
     if (t.completed) return false;
 
     if (!t.dueDate) return false;
@@ -36,17 +55,17 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
   // Estadísticas (solo números dinámicos)
   const stats = [
     {
-      value: allTasks.length,
+      value: visibleTasks.length,
       type: "total",
       label: "Tareas Totales",
     },
     {
-      value: allTasks.filter((t) => !t.completed).length,
+      value: visibleTasks.filter((t) => !t.completed).length,
       type: "pending",
       label: "Pendientes",
     },
     {
-      value: allTasks.filter((t) => t.completed).length,
+      value: visibleTasks.filter((t) => t.completed).length,
       type: "completed",
       label: "Completadas",
     },
@@ -202,28 +221,30 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
                           fontSize: "14px",
                           fontWeight: "500",
                           backgroundColor:
-                            selectedDate === item.date
+                            selectedDate.toDateString() === item.date.toDateString()
                               ? "#3f63eb"
                               : "transparent",
                           color:
-                            selectedDate === item.date ? "white" : "#4b5563",
+                            selectedDate.toDateString() === item.date.toDateString()
+                              ? "white"
+                              : "#4b5563",
                           border: "none",
                           cursor: "pointer",
                           transition: "background-color 0.2s",
                         }}
                         onMouseEnter={(e) => {
-                          if (selectedDate !== item.date) {
+                          if (selectedDate.toDateString() !== item.date.toDateString()) {
                             e.currentTarget.style.backgroundColor = "#f3f4f6";
                           }
                         }}
                         onMouseLeave={(e) => {
-                          if (selectedDate !== item.date) {
+                          if (selectedDate.toDateString() !== item.date.toDateString()) {
                             e.currentTarget.style.backgroundColor =
                               "transparent";
                           }
                         }}
                       >
-                        {item.date}
+                        {item.date.getDate()}
                       </button>
                     );
                   })}
@@ -261,7 +282,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
                     marginBottom: "16px",
                   }}
                 >
-                  Tareas del {selectedDate} de {currentMonth}
+                  Tareas del {selectedDate.getDate()} de {currentMonth}
                 </h3>
 
                 <div
@@ -402,7 +423,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
               </div>
 
               <div style={{ fontSize: "28px", fontWeight: "700" }}>
-                {allTasks.length}
+                {visibleTasks.length}
               </div>
 
               <div style={{ color: "#6b7280" }}>
@@ -439,7 +460,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
               </div>
 
               <div style={{ fontSize: "28px", fontWeight: "700" }}>
-                {allTasks.filter(t => !t.completed).length}
+                {visibleTasks.filter(t => !t.completed).length}
               </div>
 
               <div style={{ color: "#6b7280" }}>
@@ -476,7 +497,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
               </div>
 
               <div style={{ fontSize: "28px", fontWeight: "700" }}>
-                {allTasks.filter(t => t.completed).length}
+                {visibleTasks.filter(t => t.completed).length}
               </div>
 
               <div style={{ color: "#6b7280" }}>
