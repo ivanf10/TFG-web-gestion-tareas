@@ -2,7 +2,19 @@ import { useAppState } from "../hooks/useAppState";
 import Header from "../components/layout/Header";
 import { useAuth } from "../hooks/useAuth";
 
-export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
+export default function Home({
+  allTasks = [],
+  setIsMobileMenuOpen,
+  toggleTaskStatus,
+
+  notificationReadIds,
+  markNotificationAsRead,
+  markNotificationAsUnread,
+  markAllNotifications,
+
+  setActiveView,
+  setSelectedTask,
+}) {
   const {
     selectedDate,
     setSelectedDate,
@@ -52,6 +64,22 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
     return taskDate < today;
   }).length;
 
+  // Notificaciones: tareas con recordatorio para hoy o fechas pasadas
+  const reminderTasks = visibleTasks.filter((task) => {
+    if (!task.recordatorio) return false;
+
+    if (!task.dueDate) return false;
+
+    const dueDate = new Date(task.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+
+    return dueDate <= today;
+  });
+
+  const unreadNotifications = reminderTasks.filter(
+    (task) => !notificationReadIds.includes(task.id)
+  );
+
   // Estadísticas (solo números dinámicos)
   const stats = [
     {
@@ -85,9 +113,33 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
 
       {/* HEADER COMPONENT */}
       <Header
-        toggleMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        toggleMenu={() =>
+          setIsMobileMenuOpen(!isMobileMenuOpen)
+        }
         activeView="inicio"
-        user={{ name: "Ivan" }}
+        user={{
+          name: currentUser?.nombre || "Usuario",
+        }}
+
+        notifications={reminderTasks.map((task) => ({
+          ...task,
+          read: notificationReadIds.includes(task.id),
+        }))}
+
+        unreadCount={
+          reminderTasks.filter(
+            (task) =>
+              !notificationReadIds.includes(task.id)
+          ).length
+        }
+
+        toggleTaskStatus={toggleTaskStatus}
+        markNotificationAsRead={markNotificationAsRead}
+        markNotificationAsUnread={markNotificationAsUnread}
+        markAllNotifications={markAllNotifications}
+
+        setActiveView={setActiveView}
+        setSelectedTask={setSelectedTask}
       />
 
       <div className="row g-3 g-md-5 mb-3 mb-md-5 align-items-stretch">
@@ -328,6 +380,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
                       <input
                         type="checkbox"
                         checked={task.completed || false}
+                        onChange={() => toggleTaskStatus(task.id)}
                         style={{
                           marginTop: "4px",
                           width: "16px",
@@ -337,7 +390,6 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
                           accentColor: "#3f63eb",
                           cursor: "pointer",
                         }}
-                        readOnly
                       />
 
                       {/* TEXTO */}
@@ -363,7 +415,7 @@ export default function Home({ allTasks = [], setIsMobileMenuOpen }) {
                             marginBottom: "0",
                           }}
                         >
-                          {task.category || "Sin categoría"}
+                          {task.departamentos?.join(", ") || "Sin departamentos asignados"}
                         </p>
                       </div>
                     </div>

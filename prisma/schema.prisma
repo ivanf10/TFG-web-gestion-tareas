@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model User {
+  id               String       @id @default(cuid())
+
+  nombre           String
+  apellido         String
+  email            String       @unique
+  password         String
+
+  rol              String       @default("Usuario")
+
+  departamentos    Department[]
+
+  tareasAsignadas  Task[]       @relation("AssignedTasks")
+  tareasCreadas    Task[]       @relation("CreatedTasks")
+
+  notas            Note[]
+
+  createdAt        DateTime     @default(now())
+}
+
+model Department {
+  id            String    @id @default(cuid())
+
+  nombre        String    @unique
+  descripcion   String?
+
+  miembros      User[]
+
+  tareas        Task[]
+
+  createdAt     DateTime  @default(now())
+}
+
+model Task {
+  id                    String       @id @default(cuid())
+
+  titulo                String
+  descripcion           String?
+
+  estado                String       @default("Pendiente")
+
+  fechaLimite           DateTime?
+
+  enviarRecordatorio    Boolean      @default(false)
+
+  completed             Boolean      @default(false)
+
+  departamentoId        String?
+  departamento          Department?  @relation(fields: [departamentoId], references: [id])
+
+  assignedToId          String?
+  assignedTo            User?        @relation("AssignedTasks", fields: [assignedToId], references: [id])
+
+  createdById           String
+  createdBy             User         @relation("CreatedTasks", fields: [createdById], references: [id])
+
+  createdAt             DateTime     @default(now())
+}
+
+model Note {
+  id            String    @id @default(cuid())
+
+  titulo        String
+
+  tipo          String
+
+  contenido     String?
+
+  audioUrl      String?
+
+  imageUrl      String?
+
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+
+  createdAt     DateTime  @default(now())
+}

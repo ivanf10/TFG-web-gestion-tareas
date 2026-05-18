@@ -5,7 +5,11 @@ import { useAuth } from "../hooks/useAuth";
 export default function Register({
   onBackToLogin,
 }) {
-  const { register } = useAuth();
+  const {
+    register,
+    authLoading,
+    authMessage,
+  } = useAuth();
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -17,7 +21,7 @@ export default function Register({
 
   const [errors, setErrors] = useState({});
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const newErrors = {};
 
     if (!formData.nombre.trim()) {
@@ -63,12 +67,12 @@ export default function Register({
       return;
     }
 
-    const result = register({
+    const result = await register({
       nombre: formData.nombre,
       apellido: formData.apellido,
       email: formData.email,
       contrasena: formData.contrasena,
-      departamento: "Sin asignar",
+      departamentos: "Sin asignar",
     });
 
     if (!result.success) {
@@ -79,318 +83,388 @@ export default function Register({
       return;
     }
 
-    alert(
-      "Cuenta creada correctamente",
-    );
-
     onBackToLogin();
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f9fafb",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        className="card border-0"
-        style={{
-          width: "100%",
-          maxWidth: "500px",
-          borderRadius: "20px",
-          boxShadow:
-            "0 10px 40px rgba(0,0,0,0.08)",
-        }}
-      >
-        <div className="card-body p-4 p-md-5">
-          {/* LOGO */}
-          <div className="text-center mb-4">
-            <div className="d-flex align-items-center justify-content-center gap-3 mb-3">
-              <img
-                src="/logo.png"
-                alt="OPTI TASK"
-                style={{
-                  width: "80px",
-                  height: "80px",
-                }}
-              />
-
-              <div>
-                <h1
-                  style={{
-                    fontSize: "34px",
-                    fontWeight: "700",
-                    marginBottom: "2px",
-                    fontFamily:
-                      "Dela Gothic One",
-                    whiteSpace: "nowrap",
-                    color: "#111827",
-                  }}
-                >
-                  OPTI TASK
-                </h1>
-
-                <p
-                  style={{
-                    fontSize: "18px",
-                    color: "#6b7280",
-                    marginBottom: 0,
-                  }}
-                >
-                  Gestión de Tareas
-                </p>
-              </div>
-            </div>
-
-            <h2
+    <>
+      {authLoading && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "32px",
+              borderRadius: "20px",
+              minWidth: "280px",
+              textAlign: "center",
+              boxShadow:
+                "0 10px 40px rgba(0,0,0,0.18)",
+            }}
+          >
+            <div
               style={{
-                fontSize: "24px",
-                fontWeight: "700",
-                color: "#111827",
-                marginBottom: "6px",
+                width: "42px",
+                height: "42px",
+                border: "4px solid #e5e7eb",
+                borderTop: "4px solid #2563eb",
+                borderRadius: "999px",
+                margin: "0 auto 18px",
+                animation:
+                  "spin 1s linear infinite",
               }}
-            >
-              Crear Cuenta
-            </h2>
+            />
 
             <p
               style={{
-                fontSize: "14px",
-                color: "#6b7280",
-                marginBottom: 0,
+                margin: 0,
+                fontSize: "15px",
+                fontWeight: "600",
+                color: "#111827",
               }}
             >
-              Registra un nuevo usuario
+              Creando cuenta...
             </p>
           </div>
+        </div>
+      )}
+      {authMessage && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            backgroundColor:
+              authMessage.type === "success"
+                ? "#10b981"
+                : "#ef4444",
+            color: "white",
+            padding: "14px 18px",
+            borderRadius: "12px",
+            fontWeight: "600",
+            zIndex: 99999,
+            boxShadow:
+              "0 10px 30px rgba(0,0,0,0.15)",
+          }}
+        >
+          {authMessage.text}
+        </div>
+      )}
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#f9fafb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          className="card border-0"
+          style={{
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "20px",
+            boxShadow:
+              "0 10px 40px rgba(0,0,0,0.08)",
+          }}
+        >
+          <div className="card-body p-4 p-md-5">
+            {/* LOGO */}
+            <div className="text-center mb-4">
+              <div className="d-flex align-items-center justify-content-center gap-3 mb-3">
+                <img
+                  src="/logo.png"
+                  alt="OPTI TASK"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                  }}
+                />
 
-          {errors.general && (
-            <div
-              style={{
-                padding: "12px",
-                backgroundColor: "#fee2e2",
-                color: "#dc2626",
-                borderRadius: "8px",
-                fontSize: "14px",
-                marginBottom: "20px",
-              }}
-            >
-              {errors.general}
+                <div>
+                  <h1
+                    style={{
+                      fontSize: "34px",
+                      fontWeight: "700",
+                      marginBottom: "2px",
+                      fontFamily:
+                        "Dela Gothic One",
+                      whiteSpace: "nowrap",
+                      color: "#111827",
+                    }}
+                  >
+                    OPTI TASK
+                  </h1>
+
+                  <p
+                    style={{
+                      fontSize: "18px",
+                      color: "#6b7280",
+                      marginBottom: 0,
+                    }}
+                  >
+                    Gestión de Tareas
+                  </p>
+                </div>
+              </div>
+
+              <h2
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  color: "#111827",
+                  marginBottom: "6px",
+                }}
+              >
+                Crear Cuenta
+              </h2>
+
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  marginBottom: 0,
+                }}
+              >
+                Registra un nuevo usuario
+              </p>
             </div>
-          )}
 
-          <div className="row">
-            <div className="col-12 col-md-6 mb-3">
+            {errors.general && (
+              <div
+                style={{
+                  padding: "12px",
+                  backgroundColor: "#fee2e2",
+                  color: "#dc2626",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  marginBottom: "20px",
+                }}
+              >
+                {errors.general}
+              </div>
+            )}
+
+            <div className="row">
+              <div className="col-12 col-md-6 mb-3">
+                <label style={labelStyle}>
+                  Nombre
+                </label>
+
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.nombre}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      nombre:
+                        e.target.value,
+                    })
+                  }
+                  style={{
+                    ...inputStyle,
+                    borderColor:
+                      errors.nombre
+                        ? "#ef4444"
+                        : "#e5e7eb",
+                  }}
+                />
+
+                {errors.nombre && (
+                  <p style={errorStyle}>
+                    {errors.nombre}
+                  </p>
+                )}
+              </div>
+
+              <div className="col-12 col-md-6 mb-3">
+                <label style={labelStyle}>
+                  Apellidos
+                </label>
+
+                <input
+                  type="text"
+                  className="form-control"
+                  value={
+                    formData.apellido
+                  }
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      apellido:
+                        e.target.value,
+                    })
+                  }
+                  style={{
+                    ...inputStyle,
+                    borderColor:
+                      errors.apellido
+                        ? "#ef4444"
+                        : "#e5e7eb",
+                  }}
+                />
+
+                {errors.apellido && (
+                  <p style={errorStyle}>
+                    {errors.apellido}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-3">
               <label style={labelStyle}>
-                Nombre
+                Correo Electrónico
               </label>
 
               <input
-                type="text"
+                type="email"
                 className="form-control"
-                value={formData.nombre}
+                value={formData.email}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    nombre:
+                    email:
                       e.target.value,
                   })
                 }
                 style={{
                   ...inputStyle,
                   borderColor:
-                    errors.nombre
+                    errors.email
                       ? "#ef4444"
                       : "#e5e7eb",
                 }}
               />
 
-              {errors.nombre && (
+              {errors.email && (
                 <p style={errorStyle}>
-                  {errors.nombre}
+                  {errors.email}
                 </p>
               )}
             </div>
 
-            <div className="col-12 col-md-6 mb-3">
+            <div className="mb-3">
               <label style={labelStyle}>
-                Apellidos
+                Contraseña
               </label>
 
               <input
-                type="text"
+                type="password"
                 className="form-control"
                 value={
-                  formData.apellido
+                  formData.contrasena
                 }
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    apellido:
+                    contrasena:
                       e.target.value,
                   })
                 }
                 style={{
                   ...inputStyle,
                   borderColor:
-                    errors.apellido
+                    errors.contrasena
                       ? "#ef4444"
                       : "#e5e7eb",
                 }}
               />
 
-              {errors.apellido && (
+              {errors.contrasena && (
                 <p style={errorStyle}>
-                  {errors.apellido}
+                  {errors.contrasena}
                 </p>
               )}
             </div>
-          </div>
 
-          <div className="mb-3">
-            <label style={labelStyle}>
-              Correo Electrónico
-            </label>
+            <div className="mb-4">
+              <label style={labelStyle}>
+                Confirmar Contraseña
+              </label>
 
-            <input
-              type="email"
-              className="form-control"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  email:
-                    e.target.value,
-                })
-              }
-              style={{
-                ...inputStyle,
-                borderColor:
-                  errors.email
-                    ? "#ef4444"
-                    : "#e5e7eb",
-              }}
-            />
-
-            {errors.email && (
-              <p style={errorStyle}>
-                {errors.email}
-              </p>
-            )}
-          </div>
-
-          <div className="mb-3">
-            <label style={labelStyle}>
-              Contraseña
-            </label>
-
-            <input
-              type="password"
-              className="form-control"
-              value={
-                formData.contrasena
-              }
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  contrasena:
-                    e.target.value,
-                })
-              }
-              style={{
-                ...inputStyle,
-                borderColor:
-                  errors.contrasena
-                    ? "#ef4444"
-                    : "#e5e7eb",
-              }}
-            />
-
-            {errors.contrasena && (
-              <p style={errorStyle}>
-                {errors.contrasena}
-              </p>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label style={labelStyle}>
-              Confirmar Contraseña
-            </label>
-
-            <input
-              type="password"
-              className="form-control"
-              value={
-                formData.confirmarContrasena
-              }
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  confirmarContrasena:
-                    e.target.value,
-                })
-              }
-              style={{
-                ...inputStyle,
-                borderColor:
-                  errors.confirmarContrasena
-                    ? "#ef4444"
-                    : "#e5e7eb",
-              }}
-            />
-
-            {errors.confirmarContrasena && (
-              <p style={errorStyle}>
-                {
-                  errors.confirmarContrasena
+              <input
+                type="password"
+                className="form-control"
+                value={
+                  formData.confirmarContrasena
                 }
-              </p>
-            )}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    confirmarContrasena:
+                      e.target.value,
+                  })
+                }
+                style={{
+                  ...inputStyle,
+                  borderColor:
+                    errors.confirmarContrasena
+                      ? "#ef4444"
+                      : "#e5e7eb",
+                }}
+              />
+
+              {errors.confirmarContrasena && (
+                <p style={errorStyle}>
+                  {
+                    errors.confirmarContrasena
+                  }
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={handleRegister}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "none",
+                borderRadius: "8px",
+                backgroundColor: "#2563eb",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                marginBottom: "14px",
+              }}
+            >
+              Crear Cuenta
+            </button>
+
+            <button
+              onClick={onBackToLogin}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                backgroundColor: "white",
+                color: "#4b5563",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: "pointer",
+              }}
+            >
+              Volver al Login
+            </button>
           </div>
-
-          <button
-            onClick={handleRegister}
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "none",
-              borderRadius: "8px",
-              backgroundColor: "#2563eb",
-              color: "white",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              marginBottom: "14px",
-            }}
-          >
-            Crear Cuenta
-          </button>
-
-          <button
-            onClick={onBackToLogin}
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              backgroundColor: "white",
-              color: "#4b5563",
-              fontSize: "14px",
-              fontWeight: "500",
-              cursor: "pointer",
-            }}
-          >
-            Volver al Login
-          </button>
         </div>
       </div>
-    </div>
+    </> 
   );
 }
 

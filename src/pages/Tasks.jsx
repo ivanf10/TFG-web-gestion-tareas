@@ -14,6 +14,8 @@ export default function Tasks({
   setEditFormData,
   setShowEditModal,
   showEditModal,
+  allDepartments,
+  allUsers,
   addTask,
   updateTask,
   deleteTask
@@ -26,8 +28,7 @@ export default function Tasks({
       ? allTasks
       : allTasks.filter(
           (task) =>
-            task.assignedTo ===
-            `${currentUser.nombre} ${currentUser.apellido}`,
+            task.assignedTo?.id === currentUser.id
         );
 
   // Buscador y filtros
@@ -58,8 +59,8 @@ export default function Tasks({
   const getTaskStatus = (task) => {
     if (task.completed) return "Completada";
 
-    if (task.dueDate) {
-      const taskDate = new Date(task.dueDate);
+    if (task.fechaLimite) {
+      const taskDate = new Date(task.fechaLimite);
       taskDate.setHours(0, 0, 0, 0);
 
       if (taskDate < today) return "Atrasada";
@@ -75,7 +76,7 @@ export default function Tasks({
   let filtered = visibleTasks.filter((task) => {
     const realStatus = getTaskStatus(task);
 
-    const matchesSearch = task.title
+    const matchesSearch = (task.titulo || "")
       .toLowerCase()
       .includes(taskSearchQuery.toLowerCase());
 
@@ -84,11 +85,10 @@ export default function Tasks({
 
     const matchesDepartment =
       !departmentFilter ||
-      task.department === departmentFilter;
+      task.departamento?.nombre === departmentFilter;
 
     const matchesUser =
-      !userFilter ||
-      task.assignedTo === userFilter;
+      !userFilter || task.assignedTo?.id === userFilter;
 
     return (
       matchesSearch &&
@@ -102,16 +102,16 @@ export default function Tasks({
   if (dateFilter === "recent") {
     filtered = [...filtered].sort(
       (a, b) =>
-        new Date(b.creationDate) -
-        new Date(a.creationDate),
+        new Date(b.createdAt) -
+        new Date(a.createdAt),
     );
   }
 
   if (dateFilter === "oldest") {
     filtered = [...filtered].sort(
       (a, b) =>
-        new Date(a.creationDate) -
-        new Date(b.creationDate),
+        new Date(a.createdAt) -
+        new Date(b.createdAt),
     );
   }
 
@@ -137,6 +137,103 @@ export default function Tasks({
       setCurrentPage((prev) => prev - 1);
     }
   }, [filteredTasks, currentPage, indexOfFirstTask]);
+
+  const getUserDepartments = (userId) => {
+    const user = allUsers.find((u) => u.id === userId);
+
+    return user?.departamentos || [];
+  };
+
+  const selectedDepartments = getUserDepartments(
+    currentUser?.rol === "Admin"
+      ? newTask.asignarA
+      : currentUser.id
+  );
+
+  useEffect(() => {
+    if (!showAddTaskModal) return;
+
+    if (
+      selectedDepartments.length === 1 &&
+      newTask.departamento !== selectedDepartments[0].id
+    ) {
+      setNewTask((prev) => ({
+        ...prev,
+        departamento: selectedDepartments[0].id,
+      }));
+    }
+
+    if (
+      selectedDepartments.length === 0 &&
+      newTask.departamento !== ""
+    ) {
+      setNewTask((prev) => ({
+        ...prev,
+        departamento: "",
+      }));
+    }
+
+    if (selectedDepartments.length > 1) {
+      if (
+        !selectedDepartments.some(
+          (dept) => dept.id === newTask.departamento
+        )
+      ) {
+        setNewTask((prev) => ({
+          ...prev,
+          departamento: "",
+        }));
+      }
+    }
+  }, [
+    selectedDepartments.length,
+    newTask.asignarA,
+    newTask.departamento,
+    showAddTaskModal,
+  ]);
+
+  const editSelectedDepartments =
+    getUserDepartments(
+      currentUser?.rol === "Admin"
+        ? editFormData.asignarA
+        : currentUser.id
+    );
+
+  useEffect(() => {
+    if (!showEditModal) return;
+
+    if (editSelectedDepartments.length === 1) {
+      setEditFormData((prev) => ({
+        ...prev,
+        departamento: editSelectedDepartments[0].id,
+      }));
+    }
+
+    if (editSelectedDepartments.length === 0) {
+      setEditFormData((prev) => ({
+        ...prev,
+        departamento: "",
+      }));
+    }
+
+    if (editSelectedDepartments.length > 1) {
+      if (
+        !editSelectedDepartments.some(
+          (dept) => dept.id === editFormData.departamento
+        )
+      ) {
+        setEditFormData((prev) => ({
+          ...prev,
+          departamento: "",
+        }));
+      }
+    }
+  }, [
+    editSelectedDepartments.length,
+    editFormData.asignarA,
+    editFormData.departamento,
+    showEditModal,
+  ]);
 
   return (
     <div className="p-3 p-md-5">
@@ -315,11 +412,12 @@ export default function Tasks({
                   }}
                 >
                   <option value="">Departamento</option>
-                  <option>Diseño</option>
-                  <option>Ingeniería</option>
-                  <option>Ventas</option>
-                  <option>Marketing</option>
-                  <option>Recursos Humanos</option>
+
+                  {allDepartments.map((dept) => (
+                    <option key={dept.id} value={dept.nombre}>
+                      {dept.nombre}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -334,11 +432,16 @@ export default function Tasks({
                   }}
                 >
                   <option value="">Usuario</option>
-                  <option>Ana García</option>
-                  <option>Carlos Ruiz</option>
-                  <option>Laura Méndez</option>
-                  <option>Pedro Jiménez</option>
-                  <option>Sofía Castillo</option>
+
+                  {allUsers.map((user) => {
+                    const fullName = `${user.nombre} ${user.apellido}`;
+
+                    return (
+                      <option key={user.id} value={user.id}>
+                        {fullName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -438,19 +541,21 @@ export default function Tasks({
                               color: "#111827",
                             }}
                           >
-                            {task.title}
+                            {task.titulo}
                           </td>
 
                           <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                            {task.department}
+                            {task.departamento?.nombre || "Sin asignar"}
                           </td>
 
                           <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                            {task.assignedTo}
+                            {task.assignedTo
+                              ? `${task.assignedTo.nombre} ${task.assignedTo.apellido}`
+                              : "Sin asignar"}
                           </td>
 
                           <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                            {task.dueDate}
+                            {task.fechaLimite ? task.fechaLimite.split("T")[0] : "Sin fecha"}
                           </td>
 
                           <td style={{ fontSize: "14px" }}>
@@ -490,12 +595,16 @@ export default function Tasks({
                                 e.stopPropagation();
                                 setEditingTask(task);
                                 setEditFormData({
-                                  titulo: task.title,
-                                  descripcion: task.description,
-                                  departamento: task.department,
-                                  fechaLimite: task.dueDate,
-                                  estado: status,
-                                  asignarA: task.assignedTo,
+                                  titulo: task.titulo,
+                                  descripcion: task.descripcion,
+                                  departamento: task.departamento?.id || "",
+                                  fechaLimite: task.fechaLimite
+                                    ? task.fechaLimite.split("T")[0]
+                                    : "",
+
+                                  asignarA: task.assignedTo?.id || "",
+
+                                  recordatorio: task.enviarRecordatorio,
                                 });
                                 setShowEditModal(true);
                               }}
@@ -780,15 +889,37 @@ export default function Tasks({
                           })
                         }
                       >
-                        <option value="">Seleccionar...</option>
-                        <option value="Diseño">Diseño</option>
-                        <option value="Ingeniería">Ingeniería</option>
-                        <option value="Ventas">Ventas</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Recursos Humanos">
-                          Recursos Humanos
-                        </option>
+                        {selectedDepartments.length > 1 && (
+                          <option value="" disabled>
+                            Seleccione
+                          </option>
+                        )}
+
+                        {selectedDepartments.length === 0 && (
+                          <option value="">
+                            Sin asignar
+                          </option>
+                        )}
+
+                        {selectedDepartments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.nombre}
+                          </option>
+                        ))}
                       </select>
+
+                      {currentUser?.rol === "Admin" && !newTask.asignarA && (
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                            marginTop: "6px",
+                            marginBottom: 0,
+                          }}
+                        >*
+                          Selecciona primero un usuario.
+                        </p>
+                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -887,7 +1018,7 @@ export default function Tasks({
                         value={
                           currentUser?.rol === "Admin"
                             ? newTask.asignarA
-                            : `${currentUser.nombre} ${currentUser.apellido}`
+                            : currentUser.id
                         }
                         onChange={(e) =>
                           setNewTask({
@@ -898,18 +1029,15 @@ export default function Tasks({
                       >
                         <option value="">Seleccionar usuario...</option>
 
-                        <option value="Ana García">Ana García</option>
-                        <option value="Carlos Ruiz">Carlos Ruiz</option>
-                        <option value="Laura Méndez">Laura Méndez</option>
-                        <option value="Pedro Jiménez">Pedro Jiménez</option>
-                        <option value="Sofía Castillo">Sofía Castillo</option>
+                        {allUsers.map((user) => {
+                          const fullName = `${user.nombre} ${user.apellido}`;
 
-                        {/* Usuario actual */}
-                        <option
-                          value={`${currentUser?.nombre} ${currentUser?.apellido}`}
-                        >
-                          {currentUser?.nombre} {currentUser?.apellido}
-                        </option>
+                          return (
+                            <option key={user.id} value={user.id}>
+                              {fullName}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>
@@ -980,19 +1108,36 @@ export default function Tasks({
                       onClick={() => {
                         if (!newTask.titulo) return;
 
-                        addTask({
-                          title: newTask.titulo,
-                          description: newTask.descripcion,
-                          department: newTask.departamento,
-                          dueDate: newTask.fechaLimite,
+                        if (
+                          selectedDepartments.length > 1 &&
+                          !newTask.departamento
+                        ) {
+                          return;
+                        }
 
-                          assignedTo:
-                            currentUser?.rol === "Admin"
-                              ? newTask.asignarA
-                              : `${currentUser.nombre} ${currentUser.apellido}`,
+                        console.log("CURRENT USER:", currentUser);
+
+                        addTask({
+                          titulo: newTask.titulo,
+
+                          descripcion: newTask.descripcion,
+
+                          estado: newTask.estado,
+
+                          fechaLimite: newTask.fechaLimite,
+
+                          enviarRecordatorio: newTask.recordatorio,
 
                           completed: newTask.estado === "Completada",
-                          recordatorio: newTask.recordatorio,
+
+                          departamentoId: newTask.departamento || null,
+
+                          assignedToId:
+                            currentUser?.rol === "Admin"
+                              ? String(newTask.asignarA)
+                              : String(currentUser.id),
+
+                          createdById: String(currentUser.id),
                         });
 
                         setShowAddTaskModal(false);
@@ -1014,7 +1159,7 @@ export default function Tasks({
                         fontWeight: "500",
                       }}
                     >
-                      Guardar Tarea
+                      Registrar Tarea
                     </button>
                   </div>
                 </form>
@@ -1060,7 +1205,7 @@ export default function Tasks({
                           color: "#111827",
                         }}
                       >
-                        {selectedTask.title}
+                        {selectedTask.titulo}
                       </h2>
                       <p
                         style={{
@@ -1097,12 +1242,7 @@ export default function Tasks({
                     style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
                   >
                     {(() => {
-                      const status = selectedTask.completed
-                        ? "Completada"
-                        : selectedTask.dueDate &&
-                          new Date(selectedTask.dueDate) < new Date()
-                        ? "Atrasada"
-                        : "Pendiente";
+                      const status = getTaskStatus(selectedTask);
 
                       const bg =
                         status === "Pendiente"
@@ -1152,7 +1292,7 @@ export default function Tasks({
                       }}
                     >
                       <span style={{ fontSize: "16px" }}>●</span>
-                      {selectedTask.department}
+                      {selectedTask.departamento?.nombre || "Sin asignar"}
                     </span>
                   </div>
 
@@ -1182,7 +1322,7 @@ export default function Tasks({
                       }}
                     >
                       <p style={{ marginBottom: "12px" }}>
-                        {selectedTask.description || "Sin descripción"}
+                        {selectedTask.descripcion || "Sin descripción"}
                       </p>
                     </div>
                   </div>
@@ -1225,7 +1365,7 @@ export default function Tasks({
                             flexShrink: 0,
                           }}
                         >
-                          {selectedTask.assignedTo?.charAt(0)?.toUpperCase()}
+                          {selectedTask.assignedTo?.nombre?.charAt(0)?.toUpperCase()}
                         </div>
 
                         <div>
@@ -1237,7 +1377,9 @@ export default function Tasks({
                               marginBottom: "2px",
                             }}
                           >
-                            {selectedTask.assignedTo}
+                            {selectedTask.assignedTo
+                              ? `${selectedTask.assignedTo.nombre} ${selectedTask.assignedTo.apellido}`
+                              : "Sin asignar"}
                           </p>
 
                           <p
@@ -1247,7 +1389,9 @@ export default function Tasks({
                               marginBottom: 0,
                             }}
                           >
-                            {selectedTask.department}
+                            {selectedTask.assignedTo
+                              ? `${selectedTask.assignedTo.nombre} ${selectedTask.assignedTo.apellido}`
+                              : "Sin asignar"}
                           </p>
                         </div>
                       </div>
@@ -1289,7 +1433,7 @@ export default function Tasks({
                             flexShrink: 0,
                           }}
                         >
-                          {(selectedTask.createdBy || "Admin")
+                          {(selectedTask.createdBy?.nombre || "S")
                             .charAt(0)
                             .toUpperCase()}
                         </div>
@@ -1303,7 +1447,9 @@ export default function Tasks({
                               marginBottom: "2px",
                             }}
                           >
-                            {selectedTask.createdBy || "Carlos Rodríguez"}
+                            {selectedTask.createdBy
+                              ? `${selectedTask.createdBy.nombre} ${selectedTask.createdBy.apellido}`
+                              : "Sin especificar"}
                           </p>
 
                           <p
@@ -1313,7 +1459,7 @@ export default function Tasks({
                               marginBottom: 0,
                             }}
                           >
-                            Admin
+                            Usuario creador
                           </p>
                         </div>
                       </div>
@@ -1346,7 +1492,7 @@ export default function Tasks({
                         }}
                       >
                         <span style={{ fontSize: "16px" }}>📅</span>
-                        {selectedTask.dueDate}
+                        {selectedTask.fechaLimite || "Sin fecha"}
                       </p>
                     </div>
 
@@ -1374,7 +1520,7 @@ export default function Tasks({
                         }}
                       >
                         <span style={{ fontSize: "16px" }}>🕒</span>
-                        {selectedTask.creationDate || "—"}
+                        {selectedTask.createdAt || "—"}
                       </p>
                     </div>
                   </div>
@@ -1400,7 +1546,7 @@ export default function Tasks({
                           cursor: "not-allowed",
                           accentColor: "#3f63eb",
                         }}
-                        checked={selectedTask.recordatorio || false}
+                        checked={selectedTask.enviarRecordatorio || false}
                         disabled
                       />
                       <label
@@ -1473,13 +1619,28 @@ export default function Tasks({
                         onClick={() => {
                           setEditingTask(selectedTask);
                           setEditFormData({
-                            titulo: selectedTask.title,
-                            descripcion: selectedTask.description,
-                            departamento: selectedTask.department,
-                            fechaLimite: selectedTask.dueDate,
-                            estado: selectedTask.completed ? "Completada" : "Pendiente",
-                            asignarA: selectedTask.assignedTo,
-                            recordatorio: selectedTask.recordatorio,
+                            titulo: selectedTask.titulo,
+
+                            descripcion: selectedTask.descripcion,
+
+                            departamento:
+                              selectedTask.departamento?.id || "",
+
+                            fechaLimite:
+                              selectedTask.fechaLimite
+                                ? selectedTask.fechaLimite.split("T")[0]
+                                : "",
+
+                            estado:
+                              selectedTask.completed
+                                ? "Completada"
+                                : "Pendiente",
+
+                            asignarA:
+                              selectedTask.assignedTo?.id || "",
+
+                            recordatorio:
+                              selectedTask.enviarRecordatorio,
                           });
                           setShowEditModal(true);
                           setSelectedTask(null);
@@ -1518,7 +1679,7 @@ export default function Tasks({
 
                       <button
                         onClick={() => {
-                          toggleTaskStatus(selectedTask.id);
+                          toggleTaskStatus(selectedTask);
                           setSelectedTask(null);
                         }}
                          style={{
@@ -1596,7 +1757,7 @@ export default function Tasks({
                           color: "#111827",
                         }}
                       >
-                        {editingTask.title}
+                        {editingTask.titulo}
                       </h2>
                       <p
                         style={{
@@ -1716,13 +1877,41 @@ export default function Tasks({
                             })
                           }
                         >
-                          <option value="">Seleccionar...</option>
-                          <option value="Diseño">Diseño</option>
-                          <option value="Ingeniería">Ingeniería</option>
-                          <option value="Ventas">Ventas</option>
-                          <option value="Marketing">Marketing</option>
-                          <option value="Recursos Humanos">Recursos Humanos</option>
+                          {editSelectedDepartments.length > 1 && (
+                            <option value="" disabled>
+                              Seleccione
+                            </option>
+                          )}
+
+                          {editSelectedDepartments.length === 0 && (
+                            <option value="">
+                              Sin asignar
+                            </option>
+                          )}
+
+                          {allDepartments
+                            .filter((dept) =>
+                              editSelectedDepartments.some((selectedDept) => selectedDept.id === dept.id)
+                            )
+                            .map((dept) => (
+                              <option key={dept.id} value={dept.id}>
+                                {dept.nombre}
+                              </option>
+                          ))}
                         </select>
+
+                        {currentUser?.rol === "Admin" && !editFormData.asignarA && (
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "#6b7280",
+                              marginTop: "6px",
+                              marginBottom: 0,
+                            }}
+                          >*
+                            Selecciona primero un usuario.
+                          </p>
+                        )}
                       </div>
 
                       <div className="col-md-6">
@@ -1774,40 +1963,62 @@ export default function Tasks({
                           }
                         >
                           <option value="Pendiente">Pendiente</option>
-                          <option value="En Progreso">En Progreso</option>
                           <option value="Completada">Completada</option>
-                          <option value="Atrasada">Atrasada</option>
                         </select>
-                      </div>
+                        </div>
 
-                      <div className="col-md-6">
-                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
-                          Asignar a
-                        </label>
+                        <div className="col-md-6">
+                          <label
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            Asignar a
+                          </label>
 
-                        <select
-                          className="form-select"
-                          style={{
-                            borderRadius: "6px",
-                            borderColor: "#e5e7eb",
-                            fontSize: "14px",
-                            padding: "10px 12px",
-                          }}
-                          value={editFormData.asignarA}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              asignarA: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Seleccionar usuario...</option>
-                          <option value="Ana García">Ana García</option>
-                          <option value="Carlos Ruiz">Carlos Ruiz</option>
-                          <option value="Laura Méndez">Laura Méndez</option>
-                          <option value="Pedro Jiménez">Pedro Jiménez</option>
-                          <option value="Sofía Castillo">Sofía Castillo</option>
-                        </select>
+                          <select
+                            className="form-select"
+                            disabled={currentUser?.rol !== "Admin"}
+                            style={{
+                              borderRadius: "6px",
+                              borderColor: "#e5e7eb",
+                              fontSize: "14px",
+                              padding: "10px 12px",
+                              backgroundColor:
+                                currentUser?.rol !== "Admin"
+                                  ? "#f3f4f6"
+                                  : "white",
+                              cursor:
+                                currentUser?.rol !== "Admin"
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                            value={
+                              currentUser?.rol === "Admin"
+                                ? editFormData.asignarA
+                                : currentUser.id
+                            }
+                            onChange={(e) =>
+                              setEditFormData({
+                                ...editFormData,
+                                asignarA: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">Seleccionar usuario...</option>
+
+                            {allUsers.map((user) => {
+                              const fullName = `${user.nombre} ${user.apellido}`;
+
+                              return (
+                                <option key={user.id} value={user.id}>
+                                  {fullName}
+                                </option>
+                              );
+                            })}
+                          </select>
                       </div>
                     </div>
 
@@ -1884,15 +2095,36 @@ export default function Tasks({
                       <button
                         type="button"
                         onClick={() => {
+                          if (
+                            editSelectedDepartments.length > 1 &&
+                            !editFormData.departamento
+                          ) {
+                            return;
+                          }
                           updateTask({
                             id: editingTask.id,
-                            title: editFormData.titulo,
-                            description: editFormData.descripcion,
-                            department: editFormData.departamento,
-                            dueDate: editFormData.fechaLimite,
-                            assignedTo: editFormData.asignarA,
-                            completed: editFormData.estado === "Completada",
-                            recordatorio: editFormData.recordatorio,
+
+                            titulo: editFormData.titulo,
+
+                            descripcion: editFormData.descripcion,
+
+                            estado: editFormData.estado,
+
+                            fechaLimite: editFormData.fechaLimite,
+
+                            enviarRecordatorio:
+                              editFormData.recordatorio,
+
+                            completed:
+                              editFormData.estado === "Completada",
+
+                            departamentoId:
+                              editFormData.departamento || null,
+
+                            assignedToId:
+                              currentUser?.rol === "Admin"
+                                ? String(editFormData.asignarA)
+                                : String(currentUser.id),
                           });
 
                           setShowEditModal(false);

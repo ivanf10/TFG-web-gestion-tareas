@@ -10,6 +10,7 @@ export default function Users({
   deleteUser,
 
   allDepartments,
+  fetchDepartments,
 
   setIsMobileMenuOpen,
 
@@ -40,8 +41,8 @@ export default function Users({
     nombre: "",
     apellido: "",
     email: "",
-    contrasena: "",
-    departamento: "",
+    password: "",
+    departamentos: [],
     rol: "Usuario",
     });
 
@@ -73,17 +74,11 @@ export default function Users({
     }
 
     // Contraseña
-    if (!newUser.contrasena.trim()) {
-      errors.contrasena = "La contraseña es obligatoria";
-    } else if (newUser.contrasena.length < 6) {
-      errors.contrasena =
+    if (!newUser.password.trim()) {
+      errors.password = "La contraseña es obligatoria";
+    } else if (newUser.password.length < 6) {
+      errors.password =
         "La contraseña debe tener mínimo 6 caracteres";
-    }
-
-    // Departamento
-    if (!newUser.departamento) {
-      errors.departamento =
-        "Selecciona un departamento";
     }
 
     // Rol
@@ -117,11 +112,6 @@ export default function Users({
       errors.email = "Introduce un email válido";
     }
 
-    if (!editUserFormData.departamento) {
-      errors.departamento =
-        "Selecciona un departamento";
-    }
-
     if (!editUserFormData.rol) {
       errors.rol = "Selecciona un rol";
     }
@@ -131,8 +121,33 @@ export default function Users({
     return Object.keys(errors).length === 0;
   };
 
-  const [userDepartmentSearch, setUserDepartmentSearch] =
+  const [userDepartmentSearch, setUserDepartmentSearch] = useState("");
+
+  const filteredDepartments = (allDepartments || []).filter(
+    (department) =>
+      department.nombre
+        .toLowerCase()
+        .includes(userDepartmentSearch.toLowerCase()) &&
+      !newUser.departamentos.includes(department.id)
+  );
+
+  const [editUserDepartmentSearch, setEditUserDepartmentSearch] =
     useState("");
+
+  const filteredEditDepartments = (allDepartments || []).filter(
+    (department) =>
+      department.nombre
+        .toLowerCase()
+        .includes(editUserDepartmentSearch.toLowerCase()) &&
+      !editUserFormData.departamentos?.includes(department.id)
+  );
+
+  const filteredUsers = allUsers
+    .filter((user) =>
+      `${user.nombre} ${user.apellido}`
+        .toLowerCase()
+        .includes(userSearchQuery.toLowerCase())
+    );
 
   if (currentUser?.rol !== "Admin") {
     return null;
@@ -192,8 +207,8 @@ export default function Users({
             nombre: "",
             apellido: "",
             email: "",
-            contrasena: "",
-            departamento: "",
+            password: "",
+            departamentos: [],
             rol: "Usuario",
           });
 
@@ -215,126 +230,209 @@ export default function Users({
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
     >
       <div className="card-body p-3 p-md-4">
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Buscar por nombre..."
-            className="form-control"
+
+        {allUsers.length === 0 ? (
+
+          <div
             style={{
-              borderRadius: "6px",
-              borderColor: "#e5e7eb",
-              fontSize: "14px",
-              maxWidth: "300px",
+              minHeight: "420px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              padding: "40px 20px",
             }}
-            value={userSearchQuery}
-            onChange={(e) => setUserSearchQuery(e.target.value)}
-          />
-        </div>
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <div
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "50%",
+                  backgroundColor: "#f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6b7280",
+                }}
+              >
+                <svg
+                  width="30"
+                  height="30"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path
+                    d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle
+                    cx="8.5"
+                    cy="7"
+                    r="4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                  <path
+                    d="M20 8v6M23 11h-6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <th
+              <div>
+                <h3
                   style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
+                    fontSize: "18px",
                     fontWeight: "600",
-                    color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
+                    color: "#111827",
+                    marginBottom: "6px",
                   }}
                 >
-                  NOMBRE
-                </th>
+                  No hay usuarios registrados
+                </h3>
 
-                <th
+                <p
                   style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
-                    fontWeight: "600",
+                    fontSize: "14px",
                     color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
+                    marginBottom: 0,
                   }}
                 >
-                  APELLIDO/S
-                </th>
+                  Crea un nuevo usuario para comenzar.
+                </p>
+              </div>
+            </div>
+          </div>
 
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  E-MAIL
-                </th>
+        ) : (
+        <>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Buscar por nombre..."
+              className="form-control"
+              style={{
+                borderRadius: "6px",
+                borderColor: "#e5e7eb",
+                fontSize: "14px",
+                maxWidth: "300px",
+              }}
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+            />
+          </div>
 
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  DEPARTAMENTO ASIGNADO
-                </th>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    NOMBRE
+                  </th>
 
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  TIPO DE USUARIO
-                </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    APELLIDO/S
+                  </th>
 
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#6b7280",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  ACCIONES
-                </th>
-              </tr>
-            </thead>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    E-MAIL
+                  </th>
 
-            <tbody>
-              {allUsers
-                .filter((user) =>
-                  `${user.nombre} ${user.apellido}`
-                    .toLowerCase()
-                    .includes(userSearchQuery.toLowerCase()),
-                )
-                .map((user, idx) => {
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    DEPARTAMENTOS ASIGNADOS
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    TIPO DE USUARIO
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6b7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    ACCIONES
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredUsers.map((user, idx) => {
                   return (
                     <tr
                       key={user.id}
                       style={{
                         borderBottom:
-                          idx !== allUsers.length - 1
+                          idx !== filteredUsers.length - 1
                             ? "1px solid #f3f4f6"
                             : "none",
                       }}
@@ -397,7 +495,46 @@ export default function Users({
                           cursor: "pointer",
                         }}
                       >
-                        {user.departamento}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "6px",
+                          }}
+                        >
+                          {user.departamentos?.length ? (
+                            user.departamentos.map((dept) => (
+                              <span
+                                key={dept.id}
+                                style={{
+                                  display: "inline-block",
+                                  padding: "4px 8px",
+                                  borderRadius: "4px",
+                                  backgroundColor: "#eff6ff",
+                                  color: "#2563eb",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {dept.nombre}
+                              </span>
+                            ))
+                          ) : (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                backgroundColor: "#f3f4f6",
+                                color: "#6b7280",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              Sin asignar
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td
@@ -448,7 +585,7 @@ export default function Users({
                                 nombre: user.nombre,
                                 apellido: user.apellido,
                                 email: user.email,
-                                departamento: user.departamento,
+                                departamentos: user.departamentos?.map((d) => d.id) || [],
                                 rol: user.rol,
                               });
 
@@ -470,13 +607,15 @@ export default function Users({
                           </button>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (
                                 window.confirm(
                                   "¿Seguro que quieres eliminar este usuario?",
                                 )
                               ) {
-                                deleteUser(selectedUserForDetail.id);
+                                await deleteUser(user.id);
+
+                                await fetchDepartments();
 
                                 setShowUserDetailModal(false);
                                 setSelectedUserForDetail(null);
@@ -501,281 +640,313 @@ export default function Users({
                     </tr>
                   );
                 })}
-            </tbody>
-          </table>
-        </div>
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
       </div>
     </div>
     {/* Add User Modal */}
-      {showAddUserModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 2000,
-          }}
-          onClick={() => {
-            setShowAddUserModal(false);
-
-            setUserErrors({});
-
-            setNewUser({
-              nombre: "",
-              apellido: "",
-              email: "",
-              contrasena: "",
-              departamento: "",
-              rol: "Usuario",
-            });
+    {showAddUserModal && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000,
         }}
+        onClick={() => {
+          setShowAddUserModal(false);
+
+          setUserErrors({});
+
+          setNewUser({
+            nombre: "",
+            apellido: "",
+            email: "",
+            password: "",
+            departamentos: [],
+            rol: "Usuario",
+          });
+        }}
+      >
+        <div
+          className="card rounded-3"
+          style={{
+            width: "90%",
+            maxWidth: "600px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
-            className="card rounded-3"
-            style={{
-              width: "90%",
-              maxWidth: "600px",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-4">
-                <div>
-                  <h2
-                    style={{
-                      fontSize: "22px",
-                      fontWeight: "700",
-                      marginBottom: "4px",
-                      color: "#111827",
-                    }}
-                  >
-                    Nuevo Usuario
-                  </h2>
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "#6b7280",
-                      marginBottom: 0,
-                    }}
-                  >
-                    Completa los detalles para crear un nuevo usuario.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                      setShowAddUserModal(false);
-
-                      setUserErrors({});
-
-                      setNewUser({
-                        nombre: "",
-                        apellido: "",
-                        email: "",
-                        contrasena: "",
-                        departamento: "",
-                        rol: "Usuario",
-                      });
-                  }}
+          <div className="card-body p-4">
+            <div className="d-flex align-items-center justify-content-between mb-4">
+              <div>
+                <h2
                   style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: "24px",
-                    cursor: "pointer",
-                    color: "#6b7280",
-                    padding: 0,
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    marginBottom: "4px",
+                    color: "#111827",
                   }}
                 >
-                  ×
-                </button>
+                  Nuevo Usuario
+                </h2>
+
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#6b7280",
+                    marginBottom: 0,
+                  }}
+                >
+                  Completa los detalles para crear un nuevo usuario.
+                </p>
               </div>
 
-              <form>
-                <div className="mb-3">
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Nombre <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Carlos"
-                    className="form-control"
-                    style={{
-                      borderRadius: "6px",
-                      borderColor: userErrors.nombre
-                      ? "#ef4444"
-                      : "#e5e7eb",
-                      fontSize: "14px",
-                      padding: "10px 12px",
-                    }}
-                    value={newUser.nombre}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, nombre: e.target.value })
-                    }
-                  />
-                  {userErrors.nombre && (
-                    <p
-                      style={{
-                        color: "#ef4444",
-                        fontSize: "12px",
-                        marginTop: "6px",
-                        marginBottom: "0",
-                      }}
-                    >
-                      {userErrors.nombre}
-                    </p>
-                  )}
-                </div>
+              <button
+                onClick={() => {
+                  setShowAddUserModal(false);
 
-                <div className="mb-3">
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Apellido/s <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Rodríguez García"
-                    className="form-control"
-                    style={{
-                      borderRadius: "6px",
-                      borderColor: userErrors.apellido
-                      ? "#ef4444"
-                      : "#e5e7eb",
-                      fontSize: "14px",
-                      padding: "10px 12px",
-                    }}
-                    value={newUser.apellido}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, apellido: e.target.value })
-                    }
-                  />
-                  {userErrors.apellido && (
-                    <p
-                      style={{
-                        color: "#ef4444",
-                        fontSize: "12px",
-                        marginTop: "6px",
-                        marginBottom: "0",
-                      }}
-                    >
-                      {userErrors.apellido}
-                    </p>
-                  )}
-                </div>
+                  setUserErrors({});
 
-                <div className="mb-3">
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    E-Mail <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="Ej. carlos@company.com"
-                    className="form-control"
-                    style={{
-                      borderRadius: "6px",
-                      borderColor: userErrors.email
-                      ? "#ef4444"
-                      : "#e5e7eb",
-                      fontSize: "14px",
-                      padding: "10px 12px",
-                    }}
-                    value={newUser.email}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
-                  />
-                  {userErrors.email && (
-                    <p
-                      style={{
-                        color: "#ef4444",
-                        fontSize: "12px",
-                        marginTop: "6px",
-                        marginBottom: "0",
-                      }}                    >
-                      {userErrors.email}
-                    </p>
-                  )}
-                </div>
+                  setNewUser({
+                    nombre: "",
+                    apellido: "",
+                    email: "",
+                    password: "",
+                    departamentos: [],
+                    rol: "Usuario",
+                  });
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
 
-                <div className="mb-3">
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Contraseña <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Contraseña segura"
-                    className="form-control"
-                    style={{
-                      borderRadius: "6px",
-                      borderColor: userErrors.contrasena
-                      ? "#ef4444"
-                      : "#e5e7eb",
-                      fontSize: "14px",
-                      padding: "10px 12px",
-                    }}
-                    value={newUser.contrasena}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, contrasena: e.target.value })
-                    }
-                  />
-                  {userErrors.contrasena && (
-                    <p
-                      style={{
-                        color: "#ef4444",
-                        fontSize: "12px",
-                        marginTop: "6px",
-                        marginBottom: "0",
-                      }}
-                    >
-                      {userErrors.contrasena}
-                    </p>
-                  )}
-                </div>
-
-                <div
+            <form>
+              {/* NOMBRE */}
+              <div className="mb-3">
+                <label
                   style={{
-                    display: "flex",
-                    gap: "16px",
-                    marginBottom: "24px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#111827",
+                    display: "block",
+                    marginBottom: "8px",
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  Nombre <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Ej. Carlos"
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: userErrors.nombre
+                      ? "#ef4444"
+                      : "#e5e7eb",
+                    fontSize: "14px",
+                    padding: "10px 12px",
+                  }}
+                  value={newUser.nombre}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      nombre: e.target.value,
+                    })
+                  }
+                />
+
+                {userErrors.nombre && (
+                  <p
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      marginBottom: "0",
+                    }}
+                  >
+                    {userErrors.nombre}
+                  </p>
+                )}
+              </div>
+
+              {/* APELLIDOS */}
+              <div className="mb-3">
+                <label
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#111827",
+                    display: "block",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Apellido/s <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Ej. Rodríguez García"
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: userErrors.apellido
+                      ? "#ef4444"
+                      : "#e5e7eb",
+                    fontSize: "14px",
+                    padding: "10px 12px",
+                  }}
+                  value={newUser.apellido}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      apellido: e.target.value,
+                    })
+                  }
+                />
+
+                {userErrors.apellido && (
+                  <p
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      marginBottom: "0",
+                    }}
+                  >
+                    {userErrors.apellido}
+                  </p>
+                )}
+              </div>
+
+              {/* EMAIL */}
+              <div className="mb-3">
+                <label
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#111827",
+                    display: "block",
+                    marginBottom: "8px",
+                  }}
+                >
+                  E-Mail <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+
+                <input
+                  type="email"
+                  placeholder="Ej. carlos@company.com"
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: userErrors.email
+                      ? "#ef4444"
+                      : "#e5e7eb",
+                    fontSize: "14px",
+                    padding: "10px 12px",
+                  }}
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      email: e.target.value,
+                    })
+                  }
+                />
+
+                {userErrors.email && (
+                  <p
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      marginBottom: "0",
+                    }}
+                  >
+                    {userErrors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* CONTRASEÑA */}
+              <div className="mb-3">
+                <label
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#111827",
+                    display: "block",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Contraseña <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+
+                <input
+                  type="password"
+                  placeholder="Contraseña segura"
+                  className="form-control"
+                  style={{
+                    borderRadius: "6px",
+                    borderColor: userErrors.password
+                      ? "#ef4444"
+                      : "#e5e7eb",
+                    fontSize: "14px",
+                    padding: "10px 12px",
+                  }}
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      password: e.target.value,
+                    })
+                  }
+                />
+
+                {userErrors.password && (
+                  <p
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      marginBottom: "0",
+                    }}
+                  >
+                    {userErrors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* SELECTS */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "16px",
+                  marginBottom: "24px",
+                }}
+              >
+                {/* DEPARTAMENTOS */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+
                   <label
                     style={{
                       fontSize: "14px",
@@ -785,8 +956,181 @@ export default function Users({
                       marginBottom: "8px",
                     }}
                   >
-                    Departamento Asignado{" "}
-                    <span style={{ color: "#ef4444" }}>*</span>
+                    Departamentos
+                  </label>
+
+                  <div style={{ position: "relative" }}>
+
+                    {/* INPUT */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        padding: "10px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        minHeight: "44px",
+                        alignItems: "center",
+                      }}
+                    >
+
+                      {/* TAGS */}
+                      {newUser.departamentos.map((departmentId) => {
+
+                        const department = allDepartments.find(
+                          (d) => d.id === departmentId
+                        );
+
+                        if (!department) return null;
+
+                        return (
+                          <div
+                            key={departmentId}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              backgroundColor: "#dbeafe",
+                              color: "#1e40af",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "13px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {department.nombre}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setNewUser({
+                                  ...newUser,
+                                  departamentos:
+                                    newUser.departamentos.filter(
+                                      (d) => d !== departmentId
+                                    ),
+                                })
+                              }
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#1e40af",
+                                fontSize: "16px",
+                                padding: 0,
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* INPUT */}
+                      <input
+                        type="text"
+                        placeholder={
+                          newUser.departamentos.length === 0
+                            ? "Buscar departamentos..."
+                            : ""
+                        }
+                        className="form-control"
+                        style={{
+                          border: "none",
+                          outline: "none",
+                          padding: 0,
+                          fontSize: "14px",
+                          flex: 1,
+                          minWidth: "150px",
+                          backgroundColor: "transparent",
+                          boxShadow: "none",
+                        }}
+                        value={userDepartmentSearch}
+                        onChange={(e) =>
+                          setUserDepartmentSearch(e.target.value)
+                        }
+                      />
+
+                    </div>
+
+                    {/* DROPDOWN */}
+                    {userDepartmentSearch &&
+                      filteredDepartments.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            marginTop: "6px",
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow:
+                              "0 10px 25px rgba(0,0,0,0.08)",
+                            zIndex: 50,
+                            overflow: "hidden",
+                          }}
+                        >
+
+                          {filteredDepartments.map((department) => (
+                            <button
+                              key={department.id}
+                              type="button"
+                              onClick={() => {
+
+                                setNewUser({
+                                  ...newUser,
+                                  departamentos: [
+                                    ...newUser.departamentos,
+                                    department.id,
+                                  ],
+                                });
+
+                                setUserDepartmentSearch("");
+                              }}
+                              style={{
+                                width: "100%",
+                                border: "none",
+                                background: "white",
+                                padding: "10px 12px",
+                                textAlign: "left",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "#f9fafb")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "white")
+                              }
+                            >
+                              {department.nombre}
+                            </button>
+                          ))}
+
+                        </div>
+                      )}
+
+                  </div>
+                </div>
+
+                {/* TIPO DE USUARIO */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#111827",
+                      display: "block",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Tipo de Usuario
                   </label>
 
                   <div
@@ -800,7 +1144,7 @@ export default function Users({
                       className="form-control"
                       style={{
                         borderRadius: "6px",
-                        borderColor: userErrors.departamento
+                        borderColor: userErrors.rol
                           ? "#ef4444"
                           : "#e5e7eb",
                         fontSize: "14px",
@@ -812,24 +1156,16 @@ export default function Users({
                         height: "44px",
                         width: "100%",
                       }}
-                      value={newUser.departamento}
+                      value={newUser.rol}
                       onChange={(e) =>
                         setNewUser({
                           ...newUser,
-                          departamento: e.target.value,
+                          rol: e.target.value,
                         })
                       }
                     >
-                      <option value="">Seleccionar departamento</option>
-
-                      {allDepartments.map((department) => (
-                        <option
-                          key={department.id}
-                          value={department.name}
-                        >
-                          {department.name}
-                        </option>
-                      ))}
+                      <option value="Usuario">Usuario</option>
+                      <option value="Admin">Admin</option>
                     </select>
 
                     <svg
@@ -857,154 +1193,91 @@ export default function Users({
                     </svg>
                   </div>
                 </div>
+              </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <label
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        color: "#111827",
-                        display: "block",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      Tipo de Usuario <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
-                    <div
-                      style={{
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      <select
-                        className="form-control"
-                        style={{
-                          borderRadius: "6px",
-                          borderColor: userErrors.rol ? "#ef4444" : "#e5e7eb",
-                          fontSize: "14px",
-                          padding: "10px 12px",
-                          paddingRight: "32px",
-                          appearance: "none",
-                          backgroundColor: "white",
-                          cursor: "pointer",
-                          height: "44px",
-                          width: "100%",
-                        }}
-                        value={newUser.rol}
-                        onChange={(e) =>
-                          setNewUser({ ...newUser, rol: e.target.value })
-                        }
-                      >
-                        <option value="Usuario">Usuario</option>
-                        <option value="Admin">Admin</option>
-                      </select>
-                      <svg
-                        style={{
-                          position: "absolute",
-                          right: "10px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          width: "18px",
-                          height: "18px",
-                          pointerEvents: "none",
-                          color: "#6b7280",
-                        }}
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M5.5 7.5L10 12L14.5 7.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+              {/* FOOTER */}
+              <div
+                style={{
+                  borderTop: "1px solid #e5e7eb",
+                  paddingTop: "16px",
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUserModal(false);
 
-                <div
+                    setUserErrors({});
+
+                    setNewUser({
+                      nombre: "",
+                      apellido: "",
+                      email: "",
+                      password: "",
+                      departamentos: [],
+                      rol: "Usuario",
+                    });
+                  }}
                   style={{
-                    borderTop: "1px solid #e5e7eb",
-                    paddingTop: "16px",
-                    display: "flex",
-                    gap: "12px",
-                    justifyContent: "flex-end",
+                    padding: "10px 16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    backgroundColor: "#f3f4f6",
+                    color: "#4b5563",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddUserModal(false);
+                  Cancelar
+                </button>
 
-                      setUserErrors({});
+                <button
+                  type="button"
+                  onClick={async () => {
+                  const isValid = validateUserForm();
 
-                      setNewUser({
-                        nombre: "",
-                        apellido: "",
-                        email: "",
-                        contrasena: "",
-                        departamento: "",
-                        rol: "Usuario",
-                      });
-                    }}
-                    style={{
-                      padding: "10px 16px",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      backgroundColor: "#f3f4f6",
-                      color: "#4b5563",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const isValid = validateUserForm();
+                  if (!isValid) return;
 
-                      if (!isValid) return;
+                  await addUser(newUser);
 
-                      addUser(newUser);
+                  await fetchDepartments();
 
-                      setShowAddUserModal(false);
+                  setShowAddUserModal(false);
 
-                      setNewUser({
-                        nombre: "",
-                        apellido: "",
-                        email: "",
-                        contrasena: "",
-                        departamento: "",
-                        rol: "Usuario",
-                      });
+                  setNewUser({
+                    nombre: "",
+                    apellido: "",
+                    email: "",
+                    password: "",
+                    departamentos: [],
+                    rol: "Usuario",
+                  });
 
-                      setUserErrors({});
-                    }}
-                    style={{
-                      padding: "10px 16px",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      backgroundColor: "#2563eb",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Guardar Usuario
-                  </button>
-                </div>
-              </form>
-            </div>
+                  setUserErrors({});
+                }}
+                  style={{
+                    padding: "10px 16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    backgroundColor: "#2563eb",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Registrar Usuario
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* User Detail Modal */}
       {showUserDetailModal && selectedUserForDetail && (
@@ -1159,7 +1432,13 @@ export default function Users({
                     marginBottom: 0,
                   }}
                 >
-                  {selectedUserForDetail.departamento}
+                  {
+                    selectedUserForDetail.departamentos?.length
+                      ? selectedUserForDetail.departamentos
+                          .map((d) => d.nombre)
+                          .join(", ")
+                      : "Sin asignar"
+                  }
                 </p>
               </div>
 
@@ -1259,18 +1538,49 @@ export default function Users({
                         marginBottom: "8px",
                       }}
                     >
-                      Departamento
+                      Departamentos
                     </h3>
 
-                    <p
+                    <div
                       style={{
-                        fontSize: "14px",
-                        color: "#111827",
-                        marginBottom: 0,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
                       }}
                     >
-                      {selectedUserForDetail.departamento}
-                    </p>
+                      {selectedUserForDetail.departamentos?.length ? (
+                        selectedUserForDetail.departamentos.map((dept) => (
+                          <span
+                            key={dept.id}
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "#eff6ff",
+                              color: "#2563eb",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {dept.nombre}
+                          </span>
+                        ))
+                      ) : (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            backgroundColor: "#f3f4f6",
+                            color: "#6b7280",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Sin asignar
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1287,13 +1597,15 @@ export default function Users({
                 }}
               >
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       window.confirm(
                         "¿Seguro que quieres eliminar este usuario?",
                       )
                     ) {
-                      deleteUser(selectedUserForDetail.id);
+                      await deleteUser(selectedUserForDetail.id);
+
+                      await fetchDepartments();
 
                       setShowUserDetailModal(false);
                       setSelectedUserForDetail(null);
@@ -1321,8 +1633,7 @@ export default function Users({
                       nombre: selectedUserForDetail.nombre,
                       apellido: selectedUserForDetail.apellido,
                       email: selectedUserForDetail.email,
-                      departamento:
-                        selectedUserForDetail.departamento,
+                      departamentos: selectedUserForDetail.departamentos?.map((d) => d.id) || [],
                       rol: selectedUserForDetail.rol,
                     });
 
@@ -1585,8 +1896,9 @@ export default function Users({
                     marginBottom: "24px",
                   }}
                 >
-                  {/* DEPARTAMENTO */}
-                  <div style={{ flex: 1 }}>
+                  {/* DEPARTAMENTOS */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+
                     <label
                       style={{
                         fontSize: "14px",
@@ -1596,46 +1908,171 @@ export default function Users({
                         marginBottom: "8px",
                       }}
                     >
-                      Departamento
+                      Departamentos
                     </label>
 
-                    <select
-                      className="form-control"
-                      style={{
-                        borderRadius: "6px",
-                        borderColor:
-                          editUserErrors.departamento
-                            ? "#ef4444"
-                            : "#e5e7eb",
-                        fontSize: "14px",
-                        padding: "10px 12px",
-                        height: "44px",
-                      }}
-                      value={editUserFormData.departamento}
-                      onChange={(e) =>
-                        setEditUserFormData({
-                          ...editUserFormData,
-                          departamento: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">
-                        Seleccionar departamento
-                      </option>
+                    <div style={{ position: "relative" }}>
 
-                      {allDepartments.map((department) => (
-                        <option
-                          key={department.id}
-                          value={department.name}
-                        >
-                          {department.name}
-                        </option>
-                      ))}
-                    </select>
+                      {/* INPUT */}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          padding: "10px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid #e5e7eb",
+                          backgroundColor: "#f9fafb",
+                          minHeight: "44px",
+                          alignItems: "center",
+                        }}
+                      >
+
+                        {/* TAGS */}
+                        {editUserFormData.departamentos?.map((departmentId) => {
+
+                          const department = allDepartments.find(
+                            (d) => d.id === departmentId
+                          );
+
+                          if (!department) return null;
+
+                          return (
+                            <div
+                              key={departmentId}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                backgroundColor: "#dbeafe",
+                                color: "#1e40af",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              {department.nombre}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditUserFormData({
+                                    ...editUserFormData,
+                                    departamentos:
+                                      editUserFormData.departamentos.filter(
+                                        (d) => d !== departmentId
+                                      ),
+                                  })
+                                }
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: "#1e40af",
+                                  fontSize: "16px",
+                                  padding: 0,
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* INPUT */}
+                        <input
+                          type="text"
+                          placeholder={
+                            editUserFormData.departamentos?.length === 0
+                              ? "Buscar departamentos..."
+                              : ""
+                          }
+                          className="form-control"
+                          style={{
+                            border: "none",
+                            outline: "none",
+                            padding: 0,
+                            fontSize: "14px",
+                            flex: 1,
+                            minWidth: "150px",
+                            backgroundColor: "transparent",
+                            boxShadow: "none",
+                          }}
+                          value={editUserDepartmentSearch}
+                          onChange={(e) =>
+                            setEditUserDepartmentSearch(e.target.value)
+                          }
+                        />
+
+                      </div>
+
+                      {/* DROPDOWN */}
+                      {editUserDepartmentSearch &&
+                        filteredEditDepartments.length > 0 && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "100%",
+                              left: 0,
+                              right: 0,
+                              marginTop: "6px",
+                              backgroundColor: "white",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "8px",
+                              boxShadow:
+                                "0 10px 25px rgba(0,0,0,0.08)",
+                              zIndex: 50,
+                              overflow: "hidden",
+                            }}
+                          >
+
+                            {filteredEditDepartments.map((department) => (
+                              <button
+                                key={department.id}
+                                type="button"
+                                onClick={() => {
+
+                                  setEditUserFormData({
+                                    ...editUserFormData,
+                                    departamentos: [
+                                      ...(editUserFormData.departamentos || []),
+                                      department.id,
+                                    ],
+                                  });
+
+                                  setEditUserDepartmentSearch("");
+                                }}
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  background: "white",
+                                  padding: "10px 12px",
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                  fontSize: "14px",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "#f9fafb")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "white")
+                                }
+                              >
+                                {department.nombre}
+                              </button>
+                            ))}
+
+                          </div>
+                        )}
+
+                    </div>
                   </div>
 
                   {/* ROL */}
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <label
                       style={{
                         fontSize: "14px",
@@ -1648,33 +2085,70 @@ export default function Users({
                       Tipo de Usuario
                     </label>
 
-                    <select
-                      className="form-control"
+                    <div
                       style={{
-                        borderRadius: "6px",
-                        borderColor: editUserErrors.rol
-                          ? "#ef4444"
-                          : "#e5e7eb",
-                        fontSize: "14px",
-                        padding: "10px 12px",
-                        height: "44px",
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
                       }}
-                      value={editUserFormData.rol}
-                      onChange={(e) =>
-                        setEditUserFormData({
-                          ...editUserFormData,
-                          rol: e.target.value,
-                        })
-                      }
                     >
-                      <option value="Usuario">
-                        Usuario
-                      </option>
+                      <select
+                        className="form-control"
+                        style={{
+                          borderRadius: "6px",
+                          borderColor: editUserErrors.rol
+                            ? "#ef4444"
+                            : "#e5e7eb",
+                          fontSize: "14px",
+                          padding: "10px 12px",
+                          paddingRight: "32px",
+                          appearance: "none",
+                          backgroundColor: "white",
+                          cursor: "pointer",
+                          height: "44px",
+                          width: "100%",
+                        }}
+                        value={editUserFormData.rol}
+                        onChange={(e) =>
+                          setEditUserFormData({
+                            ...editUserFormData,
+                            rol: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="Usuario">
+                          Usuario
+                        </option>
 
-                      <option value="Admin">
-                        Admin
-                      </option>
-                    </select>
+                        <option value="Admin">
+                          Admin
+                        </option>
+                      </select>
+
+                      <svg
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          width: "18px",
+                          height: "18px",
+                          pointerEvents: "none",
+                          color: "#6b7280",
+                        }}
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5.5 7.5L10 12L14.5 7.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
@@ -1711,16 +2185,18 @@ export default function Users({
 
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const isValid =
                         validateEditUserForm();
 
                       if (!isValid) return;
 
-                      updateUser({
+                      await updateUser({
                         ...editingUser,
                         ...editUserFormData,
                       });
+
+                      await fetchDepartments();
 
                       setShowEditUserModal(false);
 

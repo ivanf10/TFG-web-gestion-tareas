@@ -1,89 +1,151 @@
-import { useState } from "react";
-import { useAuth } from "./useAuth";
+import { useEffect, useState } from "react";
+
+const API_URL = "http://localhost:3001/tasks";
 
 export function useTasks() {
+
   const [allTasks, setTasks] = useState([]);
 
-  const { currentUser } = useAuth();
+  /* GET TASKS */
+  const fetchTasks = async () => {
+    try {
 
-  const addTask = (newTask) => {
-    const today = new Date();
+      const response = await fetch(API_URL);
 
-    const task = {
-      id: Date.now(),
-      title: newTask.title || "",
-      description: newTask.description || "",
-      department: newTask.department || "",
-      assignedTo: newTask.assignedTo || "",
-      dueDate: newTask.dueDate || "",
-      completed: newTask.completed ?? false,
-      recordatorio: newTask.recordatorio ?? false,
+      const data = await response.json();
 
-      creationDate: today.toISOString().split("T")[0],
+      setTasks(data);
 
-      createdBy: currentUser
-        ? `${currentUser.nombre} ${currentUser.apellido}`
-        : "Usuario",
-    };
+    } catch (error) {
 
-    setTasks((prev) => [...prev, task]);
+      console.error("Error fetching tasks:", error);
+
+    }
   };
 
-  // Editar tarea
-  const updateTask = (updatedTask) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === updatedTask.id
-          ? {
-              ...task,
+  /* CREATE TASK */
+const addTask = async (newTask) => {
+  try {
 
-              // campos editables
-              title: updatedTask.title,
-              description: updatedTask.description,
-              department: updatedTask.department,
-              assignedTo: updatedTask.assignedTo,
-              dueDate: updatedTask.dueDate,
-              completed: updatedTask.completed,
+    console.log("TASK ENVIADA:");
+    console.log(newTask);
 
-              recordatorio:
-                updatedTask.recordatorio ?? task.recordatorio,
+    const response = await fetch(API_URL, {
+      method: "POST",
 
-              // recalcular día calendario
-              date: updatedTask.dueDate
-                ? new Date(updatedTask.dueDate).getDate()
-                : task.date,
-            }
-          : task
-      )
-    );
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(newTask),
+    });
+
+    const data = await response.json();
+
+    console.log("RESPUESTA BACKEND:");
+    console.log(data);
+
+    if (!response.ok) {
+      throw new Error(data.error || "Error creating task");
+    }
+
+    await fetchTasks();
+
+  } catch (error) {
+
+    console.error("Error adding task:", error);
+
+  }
+};
+
+  /* UPDATE TASK */
+  const updateTask = async (updatedTask) => {
+    try {
+
+      const response = await fetch(
+        `${API_URL}/${updatedTask.id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(updatedTask),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error updating task");
+      }
+
+      await fetchTasks();
+
+    } catch (error) {
+
+      console.error("Error updating task:", error);
+
+    }
   };
 
-  // Eliminar tarea
-  const deleteTask = (taskId) => {
-    setTasks((prev) =>
-      prev.filter((task) => task.id !== taskId)
-    );
+  /* DELETE TASK */
+  const deleteTask = async (id) => {
+    try {
+
+      const response = await fetch(
+        `${API_URL}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error deleting task");
+      }
+
+      await fetchTasks();
+
+    } catch (error) {
+
+      console.error("Error deleting task:", error);
+
+    }
   };
 
-  // Toggle completada
-  const toggleTaskStatus = (taskId) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              completed: !task.completed,
-            }
-          : task
-      )
-    );
+  /* TOGGLE TASK */
+  const toggleTaskStatus = async (task) => {
+    try {
+
+      await updateTask({
+        ...task,
+        completed: !task.completed,
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
   };
+
+  /* INITIAL LOAD */
+  useEffect(() => {
+
+    fetchTasks();
+
+  }, []);
 
   return {
     allTasks,
+
+    fetchTasks,
+
     addTask,
+
     updateTask,
+
     deleteTask,
+
     toggleTaskStatus,
   };
 }

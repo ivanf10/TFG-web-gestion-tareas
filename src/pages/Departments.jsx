@@ -8,6 +8,7 @@ export default function Departments({
   addDepartment,
   updateDepartment,
   deleteDepartment,
+  fetchUsers,
   setIsMobileMenuOpen,
 }) {
 
@@ -45,8 +46,8 @@ export default function Departments({
   // BUSCADOR
   const [departmentSearchQuery, setDepartmentSearchQuery] = useState("");
 
-  const filteredDepartments = allDepartments.filter((dept) =>
-    (dept.name || "")
+  const filteredDepartments = (allDepartments || []).filter((dept) =>
+    (dept.nombre || "")
       .toLowerCase()
       .includes(departmentSearchQuery.toLowerCase())
   );
@@ -59,7 +60,18 @@ export default function Departments({
       fullName
         .toLowerCase()
         .includes(memberSearch.toLowerCase()) &&
-      !departmentMembers.includes(fullName)
+      !departmentMembers.includes(user.id)
+    );
+  });
+
+  const filteredEditUsers = (allUsers || []).filter((user) => {
+    const fullName = `${user.nombre} ${user.apellido}`;
+
+    return (
+      fullName
+        .toLowerCase()
+        .includes(editMemberSearch.toLowerCase()) &&
+      !editDepartmentMembers.includes(user.id)
     );
   });
 
@@ -115,6 +127,11 @@ export default function Departments({
               setMemberSearch("");
             }}
             className="btn btn-primary"
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: "500",
+            }}
           >
             + Añadir Departamento
           </button>
@@ -170,7 +187,7 @@ export default function Departments({
                       marginBottom: "6px",
                     }}
                   >
-                    {allDepartments.length === 0
+                    {(allDepartments || []).length === 0
                       ? "No hay departamentos registrados"
                       : "No se encontraron departamentos"}
                   </h3>
@@ -182,8 +199,10 @@ export default function Departments({
                       marginBottom: 0,
                     }}
                   >
-                    {allDepartments.length === 0
-                      ? "Crea tu primer departamento para comenzar."
+                    {(allDepartments || []).length === 0
+                      ? currentUser?.rol === "Admin"
+                        ? "Crea tu primer departamento para comenzar."
+                        : "Todavía no hay departamentos disponibles."
                       : "Prueba con otros términos de búsqueda."}
                   </p>
                 </div>
@@ -240,7 +259,7 @@ export default function Departments({
                           }}
                           style={tdClickable}
                         >
-                          {dept.name}
+                          {dept.nombre}
                         </td>
 
                         <td
@@ -250,7 +269,7 @@ export default function Departments({
                           }}
                           style={tdClickableSecondary}
                         >
-                          {dept.employees}
+                          {dept.miembros?.length || 0}
                         </td>
 
                         {currentUser?.rol === "Admin" && (
@@ -262,10 +281,12 @@ export default function Departments({
                                 onClick={() => {
                                   setEditingDepartment(dept);
                                   setEditDepartmentFormData({
-                                    nombre: dept.name,
-                                    descripcion: dept.description || "",
+                                    nombre: dept.nombre,
+                                    descripcion: dept.descripcion || "",
                                   });
-                                  setEditDepartmentMembers(dept.members || []);
+                                  setEditDepartmentMembers(
+                                    dept.miembros?.map((m) => m.id) || []
+                                  );
                                   setShowEditDepartmentModal(true);
                                 }}
                                 style={iconBtn}
@@ -327,6 +348,8 @@ export default function Departments({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="card-body p-4">
+
+              {/* HEADER */}
               <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
                   <h2
@@ -339,6 +362,7 @@ export default function Departments({
                   >
                     Nuevo Departamento
                   </h2>
+
                   <p
                     style={{
                       fontSize: "14px",
@@ -349,6 +373,7 @@ export default function Departments({
                     Completa los detalles para crear un nuevo departamento.
                   </p>
                 </div>
+
                 <button
                   onClick={() => setShowAddDepartmentModal(false)}
                   style={{
@@ -365,6 +390,8 @@ export default function Departments({
               </div>
 
               <form>
+
+                {/* NOMBRE */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -378,6 +405,7 @@ export default function Departments({
                     Nombre del Departamento{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+
                   <input
                     type="text"
                     placeholder="Ej. Recursos Humanos"
@@ -398,6 +426,7 @@ export default function Departments({
                   />
                 </div>
 
+                {/* DESCRIPCIÓN */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -410,6 +439,7 @@ export default function Departments({
                   >
                     Descripción
                   </label>
+
                   <textarea
                     placeholder="Describe brevemente las responsabilidades de este departamento..."
                     className="form-control"
@@ -431,7 +461,9 @@ export default function Departments({
                   />
                 </div>
 
+                {/* MIEMBROS */}
                 <div className="mb-4">
+
                   <label
                     style={{
                       fontSize: "14px",
@@ -449,6 +481,8 @@ export default function Departments({
                       position: "relative",
                     }}
                   >
+
+                    {/* INPUT */}
                     <div
                       style={{
                         display: "flex",
@@ -462,47 +496,59 @@ export default function Departments({
                         alignItems: "center",
                       }}
                     >
-                      {departmentMembers.map((member) => (
-                        <div
-                          key={member}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            backgroundColor: "#dbeafe",
-                            color: "#1e40af",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {member}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDepartmentMembers(
-                                departmentMembers.filter(
-                                  (m) => m !== member,
-                                ),
-                              )
-                            }
+                      {/* TAGS */}
+                      {departmentMembers.map((memberId) => {
+
+                        const user = allUsers.find(
+                          (u) => u.id === memberId
+                        );
+
+                        if (!user) return null;
+
+                        return (
+                          <div
+                            key={memberId}
                             style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              backgroundColor: "#dbeafe",
                               color: "#1e40af",
-                              fontSize: "16px",
-                              padding: 0,
-                              marginLeft: "2px",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "13px",
+                              fontWeight: "500",
                             }}
                           >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                            {user.nombre} {user.apellido}
 
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDepartmentMembers(
+                                  departmentMembers.filter(
+                                    (m) => m !== memberId
+                                  )
+                                )
+                              }
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#1e40af",
+                                fontSize: "16px",
+                                padding: 0,
+                                marginLeft: "2px",
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* INPUT */}
                       <input
                         type="text"
                         placeholder={
@@ -540,6 +586,7 @@ export default function Departments({
                       >
                         <Search size={18} />
                       </button>
+
                     </div>
 
                     {/* DROPDOWN */}
@@ -561,7 +608,9 @@ export default function Departments({
                             overflow: "hidden",
                           }}
                         >
+
                           {filteredUsers.map((user) => {
+
                             const fullName =
                               `${user.nombre} ${user.apellido}`;
 
@@ -570,12 +619,14 @@ export default function Departments({
                                 key={user.id}
                                 type="button"
                                 onClick={() => {
+
                                   setDepartmentMembers([
                                     ...departmentMembers,
-                                    fullName,
+                                    user.id,
                                   ]);
 
                                   setMemberSearch("");
+
                                 }}
                                 style={{
                                   width: "100%",
@@ -597,6 +648,7 @@ export default function Departments({
                                     "white")
                                 }
                               >
+
                                 <div
                                   style={{
                                     width: "32px",
@@ -617,6 +669,7 @@ export default function Departments({
                                 </div>
 
                                 <div>
+
                                   <p
                                     style={{
                                       margin: 0,
@@ -635,17 +688,26 @@ export default function Departments({
                                       color: "#6b7280",
                                     }}
                                   >
-                                    {user.departamento}
+                                    {
+                                      user.departamentos?.length
+                                        ? user.departamentos.map((d) => d.nombre).join(", ")
+                                        : "Sin asignar"
+                                    }
                                   </p>
+
                                 </div>
+
                               </button>
                             );
                           })}
+
                         </div>
                       )}
+
                   </div>
                 </div>
 
+                {/* FOOTER */}
                 <div
                   style={{
                     borderTop: "1px solid #e5e7eb",
@@ -655,6 +717,7 @@ export default function Departments({
                     justifyContent: "flex-end",
                   }}
                 >
+
                   <button
                     type="button"
                     onClick={() => setShowAddDepartmentModal(false)}
@@ -671,39 +734,51 @@ export default function Departments({
                   >
                     Cancelar
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => {
-                        if (!newDepartment.nombre.trim()) {
+                    onClick={async () => {
+
+                      if (!newDepartment.nombre.trim()) {
                         alert("Por favor, ingresa un nombre para el departamento.");
                         return;
-                        }
+                      }
 
-                        addDepartment({
+                      await addDepartment({
                         ...newDepartment,
-                        members: departmentMembers,
-                        });
+                        miembros: departmentMembers,
+                      });
 
-                        setShowAddDepartmentModal(false);
+                      await fetchUsers();
 
-                        setNewDepartment({ nombre: "", descripcion: "" });
-                        setDepartmentMembers([]);
-                        setMemberSearch("");
+                      setShowAddDepartmentModal(false);
+
+                      setNewDepartment({
+                        nombre: "",
+                        descripcion: "",
+                      });
+
+                      setDepartmentMembers([]);
+
+                      setMemberSearch("");
+
                     }}
                     style={{
-                        padding: "10px 16px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        backgroundColor: "#2563eb",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
+                      padding: "10px 16px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      backgroundColor: "#2563eb",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
                     }}
-                    >
+                  >
                     Guardar
-                    </button>
+                  </button>
+
                 </div>
+
               </form>
             </div>
           </div>
@@ -736,6 +811,8 @@ export default function Departments({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="card-body p-4">
+
+              {/* HEADER */}
               <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
                   <h2
@@ -748,6 +825,7 @@ export default function Departments({
                   >
                     Editar Departamento
                   </h2>
+
                   <p
                     style={{
                       fontSize: "14px",
@@ -758,6 +836,7 @@ export default function Departments({
                     Actualiza los detalles del departamento.
                   </p>
                 </div>
+
                 <button
                   onClick={() => setShowEditDepartmentModal(false)}
                   style={{
@@ -774,6 +853,8 @@ export default function Departments({
               </div>
 
               <form>
+
+                {/* NOMBRE */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -787,6 +868,7 @@ export default function Departments({
                     Nombre del Departamento{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+
                   <input
                     type="text"
                     placeholder="Ej. Recursos Humanos"
@@ -807,6 +889,7 @@ export default function Departments({
                   />
                 </div>
 
+                {/* DESCRIPCIÓN */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -819,6 +902,7 @@ export default function Departments({
                   >
                     Descripción
                   </label>
+
                   <textarea
                     placeholder="Describe brevemente las responsabilidades de este departamento..."
                     className="form-control"
@@ -840,7 +924,9 @@ export default function Departments({
                   />
                 </div>
 
+                {/* MIEMBROS */}
                 <div className="mb-4">
+
                   <label
                     style={{
                       fontSize: "14px",
@@ -852,126 +938,239 @@ export default function Departments({
                   >
                     Asignar Miembros
                   </label>
+
                   <div
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                      padding: "10px 12px",
-                      borderRadius: "6px",
-                      borderColor: "#e5e7eb",
-                      border: "1px solid #e5e7eb",
-                      backgroundColor: "#f9fafb",
-                      minHeight: "44px",
-                      alignItems: "center",
+                      position: "relative",
                     }}
                   >
-                    {editDepartmentMembers.map((member) => (
-                      <div
-                        key={member}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          backgroundColor: "#dbeafe",
-                          color: "#1e40af",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {member}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditDepartmentMembers(
-                              editDepartmentMembers.filter(
-                                (m) => m !== member,
-                              ),
-                            )
-                          }
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#1e40af",
-                            fontSize: "16px",
-                            padding: "0",
-                            marginLeft: "2px",
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <input
-                      type="text"
-                      placeholder={
-                        editDepartmentMembers.length === 0
-                          ? "Buscar usuarios..."
-                          : ""
-                      }
-                      className="form-control"
+
+                    {/* INPUT */}
+                    <div
                       style={{
-                        border: "none",
-                        outline: "none",
-                        padding: "0",
-                        fontSize: "14px",
-                        flex: "1",
-                        minWidth: "150px",
-                        backgroundColor: "transparent",
-                      }}
-                      value={editMemberSearch}
-                      onChange={(e) => setEditMemberSearch(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          editMemberSearch.trim() &&
-                          !editDepartmentMembers.includes(
-                            editMemberSearch.trim(),
-                          )
-                        ) {
-                          e.preventDefault();
-                          setEditDepartmentMembers([
-                            ...editDepartmentMembers,
-                            editMemberSearch.trim(),
-                          ]);
-                          setEditMemberSearch("");
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          editMemberSearch.trim() &&
-                          !editDepartmentMembers.includes(
-                            editMemberSearch.trim(),
-                          )
-                        ) {
-                          setEditDepartmentMembers([
-                            ...editDepartmentMembers,
-                            editMemberSearch.trim(),
-                          ]);
-                          setEditMemberSearch("");
-                        }
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#6b7280",
-                        padding: "4px 8px",
                         display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        padding: "10px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        minHeight: "44px",
                         alignItems: "center",
                       }}
                     >
-                      <Search size={18} />
-                    </button>
+
+                      {/* TAGS */}
+                      {editDepartmentMembers.map((memberId) => {
+
+                        const user = allUsers.find(
+                          (u) => u.id === memberId
+                        );
+
+                        if (!user) return null;
+
+                        return (
+                          <div
+                            key={memberId}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              backgroundColor: "#dbeafe",
+                              color: "#1e40af",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "13px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {user.nombre} {user.apellido}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditDepartmentMembers(
+                                  editDepartmentMembers.filter(
+                                    (m) => m !== memberId
+                                  )
+                                )
+                              }
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#1e40af",
+                                fontSize: "16px",
+                                padding: 0,
+                                marginLeft: "2px",
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* INPUT */}
+                      <input
+                        type="text"
+                        placeholder={
+                          editDepartmentMembers.length === 0
+                            ? "Buscar usuarios..."
+                            : ""
+                        }
+                        className="form-control"
+                        style={{
+                          border: "none",
+                          outline: "none",
+                          padding: 0,
+                          fontSize: "14px",
+                          flex: 1,
+                          minWidth: "150px",
+                          backgroundColor: "transparent",
+                          boxShadow: "none",
+                        }}
+                        value={editMemberSearch}
+                        onChange={(e) =>
+                          setEditMemberSearch(e.target.value)
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "4px",
+                        }}
+                      >
+                        <Search size={18} />
+                      </button>
+
+                    </div>
+
+                    {/* DROPDOWN */}
+                    {editMemberSearch &&
+                      filteredEditUsers.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            marginTop: "6px",
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow:
+                              "0 10px 25px rgba(0,0,0,0.08)",
+                            zIndex: 50,
+                            overflow: "hidden",
+                          }}
+                        >
+
+                          {filteredEditUsers.map((user) => {
+
+                            const fullName =
+                              `${user.nombre} ${user.apellido}`;
+
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                onClick={() => {
+
+                                  setEditDepartmentMembers([
+                                    ...editDepartmentMembers,
+                                    user.id,
+                                  ]);
+
+                                  setEditMemberSearch("");
+
+                                }}
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  background: "white",
+                                  padding: "10px 12px",
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "#f9fafb")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "white")
+                                }
+                              >
+
+                                <div
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#dbeafe",
+                                    color: "#2563eb",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: "700",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {user.nombre.charAt(0)}
+                                  {user.apellido.charAt(0)}
+                                </div>
+
+                                <div>
+
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: "14px",
+                                      fontWeight: "500",
+                                      color: "#111827",
+                                    }}
+                                  >
+                                    {fullName}
+                                  </p>
+
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: "12px",
+                                      color: "#6b7280",
+                                    }}
+                                  >
+                                    {
+                                      user.departamentos?.length
+                                        ? user.departamentos.map((d) => d.nombre).join(", ")
+                                        : "Sin asignar"
+                                    }
+                                  </p>
+
+                                </div>
+
+                              </button>
+                            );
+                          })}
+
+                        </div>
+                      )}
+
                   </div>
                 </div>
 
+                {/* FOOTER */}
                 <div
                   style={{
                     borderTop: "1px solid #e5e7eb",
@@ -981,6 +1180,7 @@ export default function Departments({
                     justifyContent: "flex-end",
                   }}
                 >
+
                   <button
                     type="button"
                     onClick={() => setShowEditDepartmentModal(false)}
@@ -997,30 +1197,38 @@ export default function Departments({
                   >
                     Cancelar
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+
                       if (!editDepartmentFormData.nombre.trim()) {
                         alert("Por favor, ingresa un nombre para el departamento.");
                         return;
                       }
 
-                      updateDepartment({
+                      await updateDepartment({
                         id: editingDepartment.id,
-                        name: editDepartmentFormData.nombre,
-                        description: editDepartmentFormData.descripcion,
-                        members: editDepartmentMembers,
+                        nombre: editDepartmentFormData.nombre,
+                        descripcion: editDepartmentFormData.descripcion,
+                        miembros: editDepartmentMembers,
                       });
 
+                      await fetchUsers();
+
                       setShowEditDepartmentModal(false);
+
                       setEditingDepartment(null);
 
                       setEditDepartmentFormData({
                         nombre: "",
                         descripcion: "",
                       });
+
                       setEditDepartmentMembers([]);
+
                       setEditMemberSearch("");
+
                     }}
                     style={{
                       padding: "10px 16px",
@@ -1035,7 +1243,9 @@ export default function Departments({
                   >
                     Guardar Cambios
                   </button>
+
                 </div>
+
               </form>
             </div>
           </div>
@@ -1082,8 +1292,9 @@ export default function Departments({
                   fontWeight: "600",
                 }}
               >
-                {selectedDepartmentForDetail.name}
+                {selectedDepartmentForDetail.nombre}
               </h4>
+
               <button
                 onClick={() => setShowDepartmentDetailModal(false)}
                 style={{
@@ -1105,6 +1316,8 @@ export default function Departments({
             </div>
 
             <div style={{ padding: "24px" }}>
+
+              {/* DESCRIPCIÓN */}
               <div
                 style={{
                   marginBottom: "24px",
@@ -1122,6 +1335,7 @@ export default function Departments({
                 >
                   Descripción
                 </h5>
+
                 <p
                   style={{
                     color: "#4b5563",
@@ -1132,11 +1346,12 @@ export default function Departments({
                     margin: 0,
                   }}
                 >
-                  {selectedDepartmentForDetail.description ||
+                  {selectedDepartmentForDetail.descripcion ||
                     "Sin descripción"}
                 </p>
               </div>
 
+              {/* MIEMBROS */}
               <div
                 style={{
                   marginBottom: "24px",
@@ -1154,6 +1369,7 @@ export default function Departments({
                 >
                   Miembros del Departamento
                 </h5>
+
                 <div
                   style={{
                     display: "flex",
@@ -1161,26 +1377,33 @@ export default function Departments({
                     gap: "8px",
                   }}
                 >
-                  {selectedDepartmentForDetail.members &&
-                  selectedDepartmentForDetail.members.length > 0 ? (
-                    selectedDepartmentForDetail.members.map((member) => (
-                      <div
-                        key={member}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          backgroundColor: "#dbeafe",
-                          color: "#1e40af",
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {member}
-                      </div>
-                    ))
+                  {selectedDepartmentForDetail.miembros &&
+                  selectedDepartmentForDetail.miembros.length > 0 ? (
+
+                    selectedDepartmentForDetail.miembros.map((user) => {
+
+                      if (!user) return null;
+
+                      return (
+                        <div
+                          key={user.id}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {user.nombre} {user.apellido}
+                        </div>
+                      );
+                    })
+
                   ) : (
                     <p
                       style={{
@@ -1195,6 +1418,7 @@ export default function Departments({
                 </div>
               </div>
 
+              {/* FOOTER */}
               <div
                 style={{
                   display: "flex",
@@ -1211,11 +1435,14 @@ export default function Departments({
                   }}
                 >
                   <strong>
-                    {selectedDepartmentForDetail.members?.length || 0}
+                    {selectedDepartmentForDetail.miembros?.length || 0}
                   </strong>{" "}
                   empleado
-                  {(selectedDepartmentForDetail.members?.length || 0) !== 1 ? "s" : ""}
+                  {(selectedDepartmentForDetail.miembros?.length || 0) !== 1
+                    ? "s"
+                    : ""}
                 </div>
+
                 <button
                   onClick={() => setShowDepartmentDetailModal(false)}
                   style={{
@@ -1232,6 +1459,7 @@ export default function Departments({
                   Cerrar
                 </button>
               </div>
+
             </div>
           </div>
         </div>

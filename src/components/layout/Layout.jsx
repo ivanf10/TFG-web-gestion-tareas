@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 
 import Home from "../../pages/Home";
@@ -32,17 +32,85 @@ export default function Layout() {
     addDepartment,
     updateDepartment,
     deleteDepartment,
+    fetchDepartments,
   } = useDepartments();
 
   // TASK UI
   const [selectedTask, setSelectedTask] = useState(null);
+  const todayString = new Date().toDateString();
+
+  const [notificationReadIds, setNotificationReadIds] =
+    useState(() => {
+      const savedDate =
+        localStorage.getItem(
+          "notificationResetDate"
+        );
+
+      const savedRead =
+        localStorage.getItem(
+          "notificationReadIds"
+        );
+
+      if (savedDate !== todayString) {
+        localStorage.setItem(
+          "notificationResetDate",
+          todayString
+        );
+
+        localStorage.setItem(
+          "notificationReadIds",
+          JSON.stringify([])
+        );
+
+        return [];
+      }
+
+      return savedRead
+        ? JSON.parse(savedRead)
+        : [];
+    });
+
   const [editingTask, setEditingTask] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const markNotificationAsRead = (taskId) => {
+    setNotificationReadIds((prev) =>
+      prev.includes(taskId)
+        ? prev
+        : [...prev, taskId]
+    );
+  };
+
+  const markNotificationAsUnread = (taskId) => {
+    setNotificationReadIds((prev) =>
+      prev.filter((id) => id !== taskId)
+    );
+  };
+
+  const markAllNotifications = (
+    notifications,
+    markAsRead
+  ) => {
+    if (markAsRead) {
+      setNotificationReadIds(
+        notifications.map((task) => task.id)
+      );
+    } else {
+      setNotificationReadIds([]);
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem(
+      "notificationReadIds",
+      JSON.stringify(notificationReadIds)
+    );
+  }, [notificationReadIds]);
 
   const [editFormData, setEditFormData] = useState({
     titulo: "",
     descripcion: "",
-    departamento: "",
+    departamentos: "",
     fechaLimite: "",
     estado: "",
     asignarA: "",
@@ -75,6 +143,7 @@ export default function Layout() {
     addUser,
     updateUser,
     deleteUser,
+    fetchUsers,
   } = useUsers();
 
   // UI USERS
@@ -89,21 +158,9 @@ export default function Layout() {
       nombre: "",
       apellido: "",
       email: "",
-      departamento: "",
+      departamentos: "",
       rol: "",
     });
-
-  // ACCOUNT
-  const [isEditingAccount, setIsEditingAccount] =
-    useState(false);
-
-  const [accountData, setAccountData] = useState({
-    nombre: "Carlos",
-    apellido: "Rodríguez",
-    email: "carlos.rodriguez@company.com",
-    departamento: "Ingeniería",
-    rol: "Admin",
-  });
 
   // RENDER
   return (
@@ -129,6 +186,25 @@ export default function Layout() {
           <Home
             allTasks={allTasks || []}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
+
+            toggleTaskStatus={toggleTaskStatus}
+
+            notificationReadIds={notificationReadIds}
+
+            markNotificationAsRead={
+              markNotificationAsRead
+            }
+
+            markNotificationAsUnread={
+              markNotificationAsUnread
+            }
+
+            markAllNotifications={
+              markAllNotifications
+            }
+
+            setActiveView={setActiveView}
+            setSelectedTask={setSelectedTask}
           />
         )}
 
@@ -150,6 +226,9 @@ export default function Layout() {
             setEditingTask={setEditingTask}
             setShowEditModal={setShowEditModal}
 
+            allDepartments={allDepartments}
+            allUsers={allUsers}
+
             addTask={addTask}
             updateTask={updateTask}
             deleteTask={deleteTask}
@@ -165,6 +244,8 @@ export default function Layout() {
             addDepartment={addDepartment}
             updateDepartment={updateDepartment}
             deleteDepartment={deleteDepartment}
+            fetchUsers={fetchUsers}
+            fetchDepartments={fetchDepartments}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
           />
         )}
@@ -228,6 +309,8 @@ export default function Layout() {
 
             editUserFormData={editUserFormData}
             setEditUserFormData={setEditUserFormData}
+
+            fetchDepartments={fetchDepartments}
 
             setIsMobileMenuOpen={setIsMobileMenuOpen}
           />

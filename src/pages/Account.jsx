@@ -230,15 +230,47 @@ export default function Account({
                   </span>
                 </div>
 
-                <p
+                <div
                   style={{
-                    fontSize: "13px",
-                    color: "#4b5563",
-                    marginBottom: 0,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: "6px",
                   }}
                 >
-                  {accountData.departamento}
-                </p>
+                  {accountData.departamentos?.length ? (
+                    accountData.departamentos.map((dept, index) => (
+                      <span
+                        key={index}
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          backgroundColor: "#eff6ff",
+                          color: "#2563eb",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {dept}
+                      </span>
+                    ))
+                  ) : (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        backgroundColor: "#f3f4f6",
+                        color: "#6b7280",
+                        fontSize: "12px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Sin asignar
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -275,42 +307,46 @@ export default function Account({
                 </h3>
 
                 <button
-									onClick={() => {
-										if (isEditingAccount) {
-											// CANCELAR
-											setEditAccountData({
-												nombre: currentUser.nombre,
-												apellido: currentUser.apellido,
-												email: currentUser.email,
-											});
+                  onClick={() => {
 
-											setIsEditingAccount(false);
-										} else {
-											// ABRIR EDICIÓN
-											setEditAccountData({
-												nombre: currentUser.nombre,
-												apellido: currentUser.apellido,
-												email: currentUser.email,
-											});
+                    if (isEditingAccount) {
 
-											setIsEditingAccount(true);
-										}
-									}}
-									style={{
-										padding: "8px 16px",
-										fontSize: "14px",
-										fontWeight: "500",
-										backgroundColor: isEditingAccount
-											? "#ef4444"
-											: "#2563eb",
-										color: "white",
-										border: "none",
-										borderRadius: "6px",
-										cursor: "pointer",
-									}}
-								>
-									{isEditingAccount ? "Cancelar" : "Editar"}
-								</button>
+                      // CANCELAR
+                      setEditAccountData({
+                        nombre: currentUser.nombre,
+                        apellido: currentUser.apellido,
+                        email: currentUser.email,
+                      });
+
+                      setIsEditingAccount(false);
+
+                    } else {
+
+                      // ABRIR EDICIÓN
+                      setEditAccountData({
+                        nombre: currentUser.nombre,
+                        apellido: currentUser.apellido,
+                        email: currentUser.email,
+                      });
+
+                      setIsEditingAccount(true);
+                    }
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    backgroundColor: isEditingAccount
+                      ? "#ef4444"
+                      : "#2563eb",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {isEditingAccount ? "Cancelar" : "Editar"}
+                </button>
               </div>
 
               {!isEditingAccount ? (
@@ -457,18 +493,49 @@ export default function Account({
                         marginBottom: "6px",
                       }}
                     >
-                      Departamento
+                      Departamentos
                     </label>
 
-                    <p
+                    <div
                       style={{
-                        fontSize: "14px",
-                        color: "#111827",
-                        marginBottom: 0,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
                       }}
                     >
-                      {accountData.departamento}
-                    </p>
+                      {accountData.departamentos?.length ? (
+                        accountData.departamentos.map((dept, index) => (
+                          <span
+                            key={index}
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "#eff6ff",
+                              color: "#2563eb",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {dept}
+                          </span>
+                        ))
+                      ) : (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            backgroundColor: "#f3f4f6",
+                            color: "#6b7280",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Sin asignar
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -621,15 +688,15 @@ export default function Account({
                       Cancelar
                     </button>
 
-                    <button
+                   <button
                       onClick={() => {
-                        setAccountData(
-                          editAccountData,
-                        );
+                        if (isDemoAccount) return;
 
-                        setIsEditingAccount(
-                          false,
-                        );
+                        updateCurrentUser(editAccountData);
+
+                        setAccountData(editAccountData);
+
+                        setIsEditingAccount(false);
                       }}
                       style={{
                         padding: "10px 16px",
@@ -679,22 +746,22 @@ export default function Account({
                 }}
               >
                 <button
-									onClick={() =>
-										setShowPasswordModal(true)
-									}
-									style={{
-										padding: "10px 16px",
-										fontSize: "14px",
-										fontWeight: "500",
-										backgroundColor: "transparent",
-										color: "#2563eb",
-										border: "1px solid #2563eb",
-										borderRadius: "6px",
-										cursor: "pointer",
-									}}
-								>
-									Cambiar Contraseña
-								</button>
+                  onClick={() => {
+                    setShowPasswordModal(true);
+                  }}
+                  style={{
+                    padding: "10px 16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    backgroundColor: "transparent",
+                    color: "#2563eb",
+                    border: "1px solid #2563eb",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cambiar Contraseña
+                </button>
 
                 <button
                   onClick={() => {
@@ -1114,53 +1181,56 @@ export default function Account({
 								</button>
 
 								<button
-									onClick={() => {
-										const isValid =
-											validatePasswordForm();
+                  onClick={() => {
 
-										if (!isValid) return;
+                    const isValid =
+                      validatePasswordForm();
 
-										if (
-											passwordData.currentPassword !==
-											currentUser.contrasena
-										) {
-											setPasswordErrors({
-												currentPassword:
-													"La contraseña actual es incorrecta",
-											});
+                    if (!isValid) return;
 
-											return;
-										}
+                    if (
+                      passwordData.currentPassword !==
+                      currentUser.contrasena
+                    ) {
+                      setPasswordErrors({
+                        currentPassword:
+                          "La contraseña actual es incorrecta",
+                      });
 
-										changePassword(passwordData.newPassword);
+                      return;
+                    }
 
-										alert(
-											"Contraseña actualizada correctamente",
-										);
+                    const result = changePassword(
+                      passwordData.newPassword,
+                    );
 
-										setShowPasswordModal(false);
+                    if (!result?.success) {
+                      return;
+                    }
 
-										setPasswordData({
-											currentPassword: "",
-											newPassword: "",
-											confirmPassword: "",
-										});
+                    setShowPasswordModal(false);
 
-										setPasswordErrors({});
-									}}
-									style={{
-										padding: "10px 16px",
-										fontSize: "14px",
-										fontWeight: "500",
-										backgroundColor: "#2563eb",
-										color: "white",
-										border: "none",
-										borderRadius: "6px",
-										cursor: "pointer",
-									}}
-								>
-									Guardar Contraseña
-								</button>
+                    setPasswordData({
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
+                    });
+
+                    setPasswordErrors({});
+                  }}
+                  style={{
+                    padding: "10px 16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    backgroundColor: "#2563eb",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Guardar Contraseña
+                </button>
 							</div>
 						</div>
 					</div>
