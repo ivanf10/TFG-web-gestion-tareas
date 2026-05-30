@@ -15,7 +15,7 @@ export default function Register({
     nombre: "",
     apellido: "",
     email: "",
-    contrasena: "",
+    password: "",
     confirmarContrasena: "",
   });
 
@@ -39,20 +39,20 @@ export default function Register({
         "Introduce un email";
     }
 
-    if (!formData.contrasena.trim()) {
-      newErrors.contrasena =
+    if (!formData.password.trim()) {
+      newErrors.password =
         "Introduce una contraseña";
     }
 
     if (
-      formData.contrasena.length < 6
+      formData.password.length < 6
     ) {
-      newErrors.contrasena =
+      newErrors.password =
         "Mínimo 6 caracteres";
     }
 
     if (
-      formData.contrasena !==
+      formData.password !==
       formData.confirmarContrasena
     ) {
       newErrors.confirmarContrasena =
@@ -71,7 +71,7 @@ export default function Register({
       nombre: formData.nombre,
       apellido: formData.apellido,
       email: formData.email,
-      contrasena: formData.contrasena,
+      password: formData.password,
       departamentos: "Sin asignar",
     });
 
@@ -366,27 +366,27 @@ export default function Register({
                 type="password"
                 className="form-control"
                 value={
-                  formData.contrasena
+                  formData.password
                 }
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    contrasena:
+                    password:
                       e.target.value,
                   })
                 }
                 style={{
                   ...inputStyle,
                   borderColor:
-                    errors.contrasena
+                    errors.password
                       ? "#ef4444"
                       : "#e5e7eb",
                 }}
               />
 
-              {errors.contrasena && (
+              {errors.password && (
                 <p style={errorStyle}>
-                  {errors.contrasena}
+                  {errors.password}
                 </p>
               )}
             </div>

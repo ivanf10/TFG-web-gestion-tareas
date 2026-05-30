@@ -72,20 +72,21 @@ model Task {
 }
 
 model Note {
-  id            String    @id @default(cuid())
+  id              String    @id @default(cuid())
 
-  titulo        String
+  titulo          String
+  tipo            String
 
-  tipo          String
+  contenido       String?
 
-  contenido     String?
+  audioUrl        String?
+  audioPublicId   String?
 
-  audioUrl      String?
+  imageUrl        String?
+  imagePublicId   String?
 
-  imageUrl      String?
+  createdById     String
+  createdBy       User      @relation(fields: [createdById], references: [id])
 
-  createdById   String
-  createdBy     User      @relation(fields: [createdById], references: [id])
-
-  createdAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
 }

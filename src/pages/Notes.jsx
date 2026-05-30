@@ -27,13 +27,12 @@ export default function Notes({
   const { currentUser } = useAuth();
 
   const visibleNotes =
-    currentUser?.rol === "Admin"
-      ? allNotes
-      : allNotes.filter(
-          (note) =>
-            note.createdBy ===
-            `${currentUser.nombre} ${currentUser.apellido}`,
-        );
+  currentUser?.rol === "Admin"
+    ? allNotes
+    : allNotes.filter(
+        (note) =>
+          note.createdBy?.id === currentUser.id
+      );
 
   // Formulario Nueva Nota
   const [newNote, setNewNote] = useState({
@@ -41,31 +40,34 @@ export default function Notes({
     titulo: "",
     contenido: "",
     audioUrl: "",
-    imageUrl: "",
+    audioPublicId: "",
   });
 
-  // AUDIO 
-  const [audioBlob, setAudioBlob] = useState(null);
+  // AUDIO
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+
+  // EDIT AUDIO
   const [editAudioPreview, setEditAudioPreview] = useState("");
+  const [editRecordingTime, setEditRecordingTime] = useState(0);
+  const [editMediaRecorder, setEditMediaRecorder] = useState(null);
+  const [editIsRecording, setEditIsRecording] = useState(false);
+  const [editAudioDeleted, setEditAudioDeleted] = useState(false);
+  const [editAudioPublicId, setEditAudioPublicId] = useState("");
+  const [audioPreview, setAudioPreview] = useState("");
+  const [editAudioBlob, setEditAudioBlob] = useState(null);
 
   // IMAGEN
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // EDIT AUDIO
-  const [editAudioBlob, setEditAudioBlob] = useState(null);
-  const [editRecordingTime, setEditRecordingTime] = useState(0);
-  const [editMediaRecorder, setEditMediaRecorder] = useState(null);
-  const [editIsRecording, setEditIsRecording] = useState(false);
-  const [editAudioDeleted, setEditAudioDeleted] = useState(false);
-
   // EDIT IMAGE
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
   const [editImageDeleted, setEditImageDeleted] = useState(false);
+  const [editImagePublicId, setEditImagePublicId] = useState("");
 
   // BUSCADOR
   const [noteSearchQuery, setNoteSearchQuery] = useState("");
@@ -76,7 +78,7 @@ export default function Notes({
 
   // FILTRADO
   const filteredNotes = visibleNotes.filter((note) =>
-    (note.title || "")
+    (note.titulo || "")
       .toLowerCase()
       .includes(noteSearchQuery.toLowerCase())
   );
@@ -96,7 +98,7 @@ export default function Notes({
     if (currentNotesPage > 1 && indexOfFirstNote >= filteredNotes.length) {
       setCurrentNotesPage((prev) => prev - 1);
     }
-  }, [filteredNotes]);
+  }, [filteredNotes, currentNotesPage, indexOfFirstNote]);
 
   // PAGINACIÓN
   const handlePreviousNotesPage = () => {
@@ -115,16 +117,21 @@ export default function Notes({
 
   useEffect(() => {
     if (editingNote) {
+
       setEditAudioDeleted(false);
-      setEditAudioBlob(null);
       setEditImageDeleted(false);
+
       setEditNoteFormData({
-        titulo: editingNote.title || "",
-        contenido: editingNote.content || "",
+        titulo: editingNote.titulo || "",
+        contenido: editingNote.contenido || "",
         audioUrl: editingNote.audioUrl || "",
         imageUrl: editingNote.imageUrl || "",
+        audioPublicId: editingNote.audioPublicId || "",
+        imagePublicId: editingNote.imagePublicId || "",
       });
 
+      setEditAudioPreview("");
+      setEditAudioPublicId("");
       setEditImagePreview(editingNote.imageUrl || null);
     }
   }, [editingNote]);
@@ -153,26 +160,15 @@ export default function Notes({
     return () => clearInterval(interval);
   }, [editIsRecording]);
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview && imagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(imagePreview);
-      }
-
-      if (editImagePreview && editImagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(editImagePreview);
-      }
-    };
-  }, [imagePreview, editImagePreview]);
-
   const startAudioRecording = async ({
-    setBlob,
     setRecorder,
     setIsRecording,
     setTime,
     onStop,
   }) => {
+
     try {
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
@@ -186,11 +182,10 @@ export default function Notes({
       };
 
       recorder.onstop = () => {
+
         const blob = new Blob(chunks, {
           type: "audio/webm",
         });
-
-        setBlob(blob);
 
         if (onStop) {
           onStop(blob);
@@ -206,54 +201,75 @@ export default function Notes({
       setTime(0);
 
     } catch (error) {
+
       console.error("Error al acceder al micro:", error);
+
     }
   };
 
   const startRecording = async () => {
+
     startAudioRecording({
-      setBlob: setAudioBlob,
       setRecorder: setMediaRecorder,
       setIsRecording: setIsRecording,
       setTime: setRecordingTime,
 
-      onStop: (blob) => {
-        setNewNote((prev) => ({
-          ...prev,
-          audioUrl: URL.createObjectURL(blob),
-        }));
+      onStop: async (blob) => {
+
+        const localAudioUrl = URL.createObjectURL(blob);
+
+        setAudioBlob(blob);
+
+        setAudioPreview(localAudioUrl);
+
       },
     });
   };
 
   const startEditRecording = async () => {
-    setEditAudioBlob(null);
+
+    if (editAudioPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(editAudioPreview);
+    }
+
     setEditAudioPreview("");
 
     startAudioRecording({
-      setBlob: setEditAudioBlob,
       setRecorder: setEditMediaRecorder,
       setIsRecording: setEditIsRecording,
       setTime: setEditRecordingTime,
 
-      onStop: (blob) => {
-        setEditAudioDeleted(true);
-        setEditAudioPreview(URL.createObjectURL(blob));
+      onStop: async (blob) => {
+
+        const localAudioUrl = URL.createObjectURL(blob);
+
+        setEditAudioBlob(blob);
+
+        setEditAudioPreview(localAudioUrl);
+
+        setEditAudioDeleted(false);
       },
     });
   };
 
   const stopRecording = () => {
+
     if (mediaRecorder) {
+
       mediaRecorder.stop();
+
       setIsRecording(false);
 
-      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+      mediaRecorder.stream
+        .getTracks()
+        .forEach((track) => track.stop());
     }
   };
 
   const stopEditRecording = () => {
+
     if (editMediaRecorder) {
+
       editMediaRecorder.stop();
 
       setEditIsRecording(false);
@@ -264,75 +280,108 @@ export default function Notes({
     }
   };
 
-  const deleteRecording = () => {
+  const deleteRecording = async () => {
+
+    if (audioPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(audioPreview);
+    }
+
     setAudioBlob(null);
-    setRecordingTime(0);
-    setIsRecording(false);
+    setAudioPreview("");
 
     setNewNote((prev) => ({
       ...prev,
       audioUrl: "",
+      audioPublicId: "",
     }));
+
+    setRecordingTime(0);
+
+    setIsRecording(false);
   };
 
-  const deleteEditRecording = () => {
-    setEditAudioBlob(null);
+  const deleteEditRecording = async () => {
+
+    if (editAudioPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(editAudioPreview);
+    }
+
     setEditAudioDeleted(true);
-    setEditAudioPreview("");
-  };
 
+    setEditAudioBlob(null);
+
+    setEditAudioPreview("");
+
+    setEditAudioPublicId("");
+  };
 
   const handleImageFileChange = (e) => {
+
     const file = e.target.files[0];
 
     if (!file) return;
 
     setImageFile(file);
 
-    const previewUrl = URL.createObjectURL(file);
-    setImagePreview(previewUrl);
+    if (imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
 
-    setNewNote((prev) => ({
-      ...prev,
-      imageUrl: previewUrl,
-    }));
+    const localPreview = URL.createObjectURL(file);
+
+    setImagePreview(localPreview);
   };
 
   const handleEditImageFileChange = (e) => {
+
     const file = e.target.files[0];
+
     if (!file) return;
 
-    setEditImageDeleted(false);
     setEditImageFile(file);
-    setEditImagePreview(URL.createObjectURL(file));
+
+    if (editImagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(editImagePreview);
+    }
+
+    const localPreview = URL.createObjectURL(file);
+
+    setEditImagePreview(localPreview);
+
+    setEditImageDeleted(false);
   };
 
-  const fileToBase64 = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-  });
+  useEffect(() => {
+    return () => {
+
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+
+      if (editImagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(editImagePreview);
+      }
+    };
+  }, [imagePreview, editImagePreview]);
 
   return (
-    <>
-      <div className="p-3 p-md-5">
-        <div className="d-flex align-items-center justify-content-between mb-3 mb-md-5">
-          <div className="d-flex align-items-center gap-3">
-            <button
-              className="btn d-md-none"
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              style={{
-                padding: "8px",
-                backgroundColor: "transparent",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              title="Menú"
-            >
+  <>
+    <div className="p-3 p-md-5">
+      <div className="d-flex align-items-center justify-content-between mb-3 mb-md-5">
+        <div className="d-flex align-items-center gap-3">
+          <button
+            className="btn d-md-none"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            style={{
+              padding: "8px",
+              backgroundColor: "transparent",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Menú"
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M3 6h18M3 12h18M3 18h18"
@@ -438,7 +487,7 @@ export default function Notes({
               </div>
             </div>
           ) : (
-             <>
+            <>
               {/* SEARCH */}
               <div className="mb-3">
                 <input
@@ -455,210 +504,227 @@ export default function Notes({
                 />
               </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "16px",
-              }}
-            >
-              {paginatedNotes.map((note) => (
               <div
-                key={note.id}
-                className="card rounded-2"
                 style={{
-                  backgroundColor:
-                    note.tipo === "text"
-                      ? "#fff3cd"
-                      : note.tipo === "audio"
-                      ? "#e7f3ff"
-                      : "#f0f0f0",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  border: "none",
-                  height: "230px",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "16px",
                 }}
               >
-                <div
-                  className="d-flex flex-column"
-                  style={{ flex: 1, padding: "12px" }}
-                >
-                  <h5
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      marginBottom: "8px",
-                      lineHeight: "1.3",
-                    }}
-                  >
-                    {note.title}
-                  </h5>
-
-                  {/* TEXT */}
-                  {note.tipo === "text" && (
-                    <div style={{ marginBottom: "2px" }}>
-                      <div
-                        style={
-                          note.content?.length > 250
-                            ? { maxHeight: "130px", overflow: "hidden" }
-                            : {}
-                        }
-                      >
-                        <p
-                          className={
-                            note.content?.length > 250
-                              ? "note-text-truncated"
-                              : ""
-                          }
-                          style={{
-                            fontSize: "13px",
-                            color: "#4b5563",
-                            marginBottom: "6px",
-                            lineHeight: "1.4",
-                            marginTop: 0,
-                          }}
-                        >
-                          {note.content}
-                        </p>
-                      </div>
-
-                      {note.content?.length > 250 && (
-                        <button
-                          onClick={() => {
-                            setSelectedNoteForDetail(note);
-                            setShowNoteDetailModal(true);
-                          }}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            color: "#3b82f6",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            padding: "0",
-                            textDecoration: "underline",
-                          }}
-                        >
-                          Leer más
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* AUDIO */}
-                  {note.tipo === "audio" && (
-                    <div style={{ marginBottom: "8px", flex: 1 }}>
-                      <audio
-                        key={note.audioUrl}
-                        controls
-                        style={{
-                          width: "100%",
-                          height: "32px",
-                        }}
-                      >
-                        <source src={note.audioUrl} type="audio/mpeg" />
-                      </audio>
-                    </div>
-                  )}
-
-                  {/* IMAGE */}
-                  {note.tipo === "image" && (
-                    <div
-                      style={{
-                        marginBottom: "8px",
-                        flex: 1,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        src={note.imageUrl}
-                        alt={note.title}
-                        style={{
-                          width: "100%",
-                          height: "100px",
-                          objectFit: "cover",
-                          borderRadius: "6px",
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* FOOTER */}
+                {paginatedNotes.map((note) => (
                   <div
+                    key={note.id}
+                    className="card rounded-2"
                     style={{
+                      backgroundColor:
+                        note.tipo === "text"
+                          ? "#fff3cd"
+                          : note.tipo === "audio"
+                          ? "#e7f3ff"
+                          : "#f0f0f0",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      border: "none",
+                      height: "230px",
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginTop: "auto",
-                      gap: "8px",
+                      flexDirection: "column",
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button
-                        onClick={() => {
-                          setEditingNote(note);
-                          setEditNoteFormData({
-                            titulo: note.title,
-                            contenido: note.content || "",
-                            audioUrl: note.audioUrl || "",
-                            imageUrl: note.imageUrl || "",
-                          });
-                          setShowEditNoteModal(true);
-                        }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: "2px",
-                          color: "#6b7280",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        title="Editar nota"
-                      >
-                        <Edit size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (window.confirm("¿Eliminar nota?")) {
-                            deleteNote(note.id);
-                          }
-                        }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: "2px",
-                          color: "#ef4444",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        title="Eliminar nota"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <span
-                      style={{
-                        fontSize: "12px",
-                        color: "#6b7280",
-                      }}
+                    <div
+                      className="d-flex flex-column"
+                      style={{ flex: 1, padding: "12px" }}
                     >
-                      {note.date}
-                    </span>
+                      <h5
+                        style={{
+                          fontSize: "15px",
+                          fontWeight: "600",
+                          color: "#111827",
+                          marginBottom: "8px",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        {note.titulo}
+                      </h5>
+
+                      {/* TEXT */}
+                      {note.tipo === "text" && (
+                        <div style={{ marginBottom: "2px" }}>
+                          <div
+                            style={
+                              note.contenido?.length > 250
+                                ? { maxHeight: "130px", overflow: "hidden" }
+                                : {}
+                            }
+                          >
+                            <p
+                              className={
+                                note.contenido?.length > 250
+                                  ? "note-text-truncated"
+                                  : ""
+                              }
+                              style={{
+                                fontSize: "13px",
+                                color: "#4b5563",
+                                marginBottom: "6px",
+                                lineHeight: "1.4",
+                                marginTop: 0,
+                              }}
+                            >
+                              {note.contenido}
+                            </p>
+                          </div>
+
+                          {note.contenido?.length > 250 && (
+                            <button
+                              onClick={() => {
+                                setSelectedNoteForDetail(note);
+                                setShowNoteDetailModal(true);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#3b82f6",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                padding: "0",
+                                textDecoration: "underline",
+                              }}
+                            >
+                              Leer más
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* AUDIO */}
+                      {note.tipo === "audio" && (
+                        <div style={{ marginBottom: "8px", flex: 1 }}>
+                          <audio
+                            key={note.audioUrl}
+                            controls
+                            style={{
+                              width: "100%",
+                              height: "32px",
+                            }}
+                          >
+                            <source
+                              src={note.audioUrl}
+                              type="audio/webm"
+                            />
+                          </audio>
+                        </div>
+                      )}
+
+                      {/* IMAGE */}
+                      {note.tipo === "image" && (
+                        <div
+                          style={{
+                            marginBottom: "8px",
+                            flex: 1,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <img
+                            src={note.imageUrl}
+                            alt={note.titulo}
+                            style={{
+                              width: "100%",
+                              height: "100px",
+                              objectFit: "contain",
+                              backgroundColor: "#fff",
+                              borderRadius: "6px",
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* FOOTER */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginTop: "auto",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", gap: "8px" }}>
+
+                          {/* EDIT */}
+                          <button
+                            onClick={() => {
+
+                              setEditingNote(note);
+
+                              setEditNoteFormData({
+                                titulo: note.titulo,
+                                contenido: note.contenido || "",
+                                audioUrl: note.audioUrl || "",
+                                imageUrl: note.imageUrl || "",
+                                audioPublicId: note.audioPublicId || "",
+                                imagePublicId: note.imagePublicId || "",
+                              });
+
+                              setEditAudioPreview(note.audioUrl || "");
+                              setEditImagePreview(note.imageUrl || null);
+
+                              setShowEditNoteModal(true);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "2px",
+                              color: "#6b7280",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            title="Editar nota"
+                          >
+                            <Edit size={16} />
+                          </button>
+
+                          {/* DELETE */}
+                          <button
+                            onClick={() => {
+                              if (window.confirm("¿Eliminar nota?")) {
+                                deleteNote(note.id);
+                              }
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "2px",
+                              color: "#ef4444",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            title="Eliminar nota"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {note.createdAt
+                            ? new Date(note.createdAt).toLocaleDateString("es-ES")
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
             </>
           )}
 
@@ -723,54 +789,56 @@ export default function Notes({
         </div>
       </div>
     </div>
-    {/* Note Detail Modal */}
+
+    {/* NOTE DETAIL MODAL */}
     {showNoteDetailModal && selectedNoteForDetail && (
-    <div
+      <div
         style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1050,
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1050,
         }}
         onClick={() => setShowNoteDetailModal(false)}
-    >
+      >
         <div
-        className="card rounded-3"
-        style={{
+          className="card rounded-3"
+          style={{
             maxWidth: "600px",
             width: "90%",
             maxHeight: "80vh",
             overflow: "auto",
             boxShadow: "0 20px 25px rgba(0,0,0,0.15)",
-        }}
-        onClick={(e) => e.stopPropagation()}
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-        {/* HEADER */}
-        <div
+
+          {/* HEADER */}
+          <div
             style={{
-            padding: "24px",
-            borderBottom: "1px solid #e5e7eb",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+              padding: "24px",
+              borderBottom: "1px solid #e5e7eb",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
-        >
+          >
             <h4
-            style={{
+              style={{
                 marginBottom: 0,
                 color: "#111827",
                 fontWeight: "600",
-            }}
+              }}
             >
-            {selectedNoteForDetail.title}
+              {selectedNoteForDetail.titulo}
             </h4>
 
             <button
-            onClick={() => setShowNoteDetailModal(false)}
-            style={{
+              onClick={() => setShowNoteDetailModal(false)}
+              style={{
                 background: "none",
                 border: "none",
                 fontSize: "24px",
@@ -782,74 +850,82 @@ export default function Notes({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-            }}
+              }}
             >
-            ×
+              ×
             </button>
-        </div>
+          </div>
 
-        {/* CONTENIDO */}
-        <div style={{ padding: "24px" }}>
+          {/* CONTENIDO */}
+          <div style={{ padding: "24px" }}>
+
+            {/* TEXT */}
             {selectedNoteForDetail.tipo === "text" && (
-            <p
+              <p
                 style={{
-                color: "#4b5563",
-                lineHeight: "1.6",
-                fontSize: "14px",
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
+                  color: "#4b5563",
+                  lineHeight: "1.6",
+                  fontSize: "14px",
+                  whiteSpace: "pre-wrap",
+                  wordWrap: "break-word",
                 }}
-            >
-                {selectedNoteForDetail.content}
-            </p>
+              >
+                {selectedNoteForDetail.contenido}
+              </p>
             )}
 
+            {/* AUDIO */}
             {selectedNoteForDetail.tipo === "audio" && (
-            <audio
+              <audio
                 controls
                 style={{
-                width: "100%",
-                marginBottom: "16px",
+                  width: "100%",
+                  marginBottom: "16px",
                 }}
-            >
+              >
                 <source
-                src={selectedNoteForDetail.audioUrl}
-                type="audio/mpeg"
+                  src={selectedNoteForDetail.audioUrl}
+                  type="audio/webm"
                 />
                 Elemento de audio no compatible con tu navegador.
-            </audio>
+              </audio>
             )}
 
+            {/* IMAGE */}
             {selectedNoteForDetail.tipo === "image" && (
-            <img
+              <img
                 src={selectedNoteForDetail.imageUrl}
-                alt={selectedNoteForDetail.title}
+                alt={selectedNoteForDetail.titulo}
                 style={{
-                width: "100%",
-                borderRadius: "8px",
-                marginBottom: "16px",
+                  width: "100%",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
                 }}
-            />
+              />
             )}
 
             {/* FECHA */}
             <div
-            style={{
+              style={{
                 display: "flex",
                 justifyContent: "flex-end",
                 marginTop: "16px",
                 fontSize: "12px",
                 color: "#6b7280",
-            }}
+              }}
             >
-            {selectedNoteForDetail.date}
+              {selectedNoteForDetail.createdAt
+                ? new Date(
+                    selectedNoteForDetail.createdAt
+                  ).toLocaleDateString("es-ES")
+                : ""}
             </div>
+
           </div>
         </div>
       </div>
-    
     )}
-      {/* Add Note Modal */}
+      {/* ADD NOTE MODAL */}
       {showAddNoteModal && (
         <div
           style={{
@@ -864,7 +940,39 @@ export default function Notes({
             justifyContent: "center",
             zIndex: 2000,
           }}
-          onClick={() => setShowAddNoteModal(false)}
+          onClick={async () => {
+
+            if (mediaRecorder && isRecording) {
+              stopRecording();
+            }
+
+            if (audioPreview?.startsWith("blob:")) {
+              URL.revokeObjectURL(audioPreview);
+            }
+
+            setAudioPreview("");
+            setAudioBlob(null);
+
+            setShowAddNoteModal(false);
+
+            setNewNote({
+              tipo: "text",
+              titulo: "",
+              contenido: "",
+              audioUrl: "",
+              audioPublicId: "",
+            });
+
+            setRecordingTime(0);
+
+            setImageFile(null);
+
+            if (imagePreview?.startsWith("blob:")) {
+              URL.revokeObjectURL(imagePreview);
+            }
+
+            setImagePreview(null);
+          }}
         >
           <div
             className="card rounded-3"
@@ -876,6 +984,8 @@ export default function Notes({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="card-body p-4">
+
+              {/* HEADER */}
               <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
                   <h2
@@ -888,6 +998,7 @@ export default function Notes({
                   >
                     Añadir Nueva Nota
                   </h2>
+
                   <p
                     style={{
                       fontSize: "14px",
@@ -900,27 +1011,40 @@ export default function Notes({
                 </div>
 
                 <button
-                  onClick={() => {
-                    setShowAddNoteModal(false);
+                  onClick={async () => {
 
-                    // RESET COMPLETO
-                    setNewNote({
-                      tipo: "text",
-                      titulo: "",
-                      contenido: "",
-                      audioUrl: "",
-                      imageUrl: "",
-                    });
+                  if (mediaRecorder && isRecording) {
+                    stopRecording();
+                  }
 
-                    setAudioBlob(null);
-                    setRecordingTime(0);
-                    setImageFile(null);
-                    setImagePreview(null);
+                  if (audioPreview?.startsWith("blob:")) {
+                    URL.revokeObjectURL(audioPreview);
+                  }
 
-                    if (mediaRecorder && isRecording) {
-                      mediaRecorder.stop();
-                    }
-                  }}
+                  setAudioPreview("");
+                  setAudioBlob(null);
+
+                  setShowAddNoteModal(false);
+
+                  setNewNote({
+                    tipo: "text",
+                    titulo: "",
+                    contenido: "",
+                    audioUrl: "",
+                    audioPublicId: "",
+                  });
+
+                  setRecordingTime(0);
+
+                  setImageFile(null);
+
+                  if (imagePreview?.startsWith("blob:")) {
+                    URL.revokeObjectURL(imagePreview);
+                  }
+
+                  setImagePreview(null);
+
+                }}
                   style={{
                     background: "none",
                     border: "none",
@@ -935,6 +1059,7 @@ export default function Notes({
               </div>
 
               <form>
+
                 {/* TIPO */}
                 <div className="mb-3">
                   <label
@@ -958,24 +1083,39 @@ export default function Notes({
                       padding: "10px 12px",
                     }}
                     value={newNote.tipo}
-                    onChange={(e) => {
-                      setNewNote({
-                        ...newNote,
-                        tipo: e.target.value,
-                        contenido: "",
-                        audioUrl: "",
-                        imageUrl: "",
-                      });
-
-                      // RESET
-                      setAudioBlob(null);
-                      setRecordingTime(0);
-                      setImageFile(null);
-                      setImagePreview(null);
+                    onChange={async (e) => {
 
                       if (mediaRecorder && isRecording) {
-                        mediaRecorder.stop();
+                        stopRecording();
                       }
+
+                      const selectedType = e.target.value;
+
+                      if (audioPreview?.startsWith("blob:")) {
+                        URL.revokeObjectURL(audioPreview);
+                      }
+
+                      setAudioPreview("");
+                      setAudioBlob(null);
+
+                      setNewNote((prev) => ({
+                        ...prev,
+                        tipo: selectedType,
+                        contenido: "",
+                        audioUrl: "",
+                        audioPublicId: "",
+                      }));
+
+                      setRecordingTime(0);
+
+                      setImageFile(null);
+
+                      if (imagePreview?.startsWith("blob:")) {
+                        URL.revokeObjectURL(imagePreview);
+                      }
+
+                      setImagePreview(null);
+
                     }}
                   >
                     <option value="text">Texto</option>
@@ -1011,7 +1151,10 @@ export default function Notes({
                     }}
                     value={newNote.titulo}
                     onChange={(e) =>
-                      setNewNote({ ...newNote, titulo: e.target.value })
+                      setNewNote({
+                        ...newNote,
+                        titulo: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -1056,6 +1199,7 @@ export default function Notes({
                 {/* AUDIO */}
                 {newNote.tipo === "audio" && (
                   <div className="mb-4">
+
                     <label
                       style={{
                         fontSize: "14px",
@@ -1076,8 +1220,10 @@ export default function Notes({
                         padding: "16px",
                       }}
                     >
-                      {!audioBlob ? (
+
+                      {!audioPreview ? (
                         <div>
+
                           <div
                             style={{
                               display: "flex",
@@ -1085,6 +1231,7 @@ export default function Notes({
                               marginBottom: "12px",
                             }}
                           >
+
                             {!isRecording ? (
                               <button
                                 type="button"
@@ -1109,7 +1256,13 @@ export default function Notes({
                                 Grabar
                               </button>
                             ) : (
-                              <div style={{ flex: 1, display: "flex", gap: "8px" }}>
+                              <div
+                                style={{
+                                  flex: 1,
+                                  display: "flex",
+                                  gap: "8px",
+                                }}
+                              >
                                 <button
                                   type="button"
                                   onClick={stopRecording}
@@ -1137,6 +1290,7 @@ export default function Notes({
                                       borderRadius: "50%",
                                     }}
                                   ></span>
+
                                   Detener
                                 </button>
 
@@ -1159,6 +1313,7 @@ export default function Notes({
                                 </div>
                               </div>
                             )}
+
                           </div>
 
                           {isRecording && (
@@ -1175,6 +1330,7 @@ export default function Notes({
                         </div>
                       ) : (
                         <div>
+
                           <div
                             style={{
                               backgroundColor: "#e0f2fe",
@@ -1183,9 +1339,15 @@ export default function Notes({
                               marginBottom: "12px",
                             }}
                           >
-                            <audio controls style={{ width: "100%", height: "32px" }}>
+                            <audio
+                              controls
+                              style={{
+                                width: "100%",
+                                height: "32px",
+                              }}
+                            >
                               <source
-                                src={newNote.audioUrl}
+                                src={audioPreview}
                                 type="audio/webm"
                               />
                             </audio>
@@ -1210,65 +1372,159 @@ export default function Notes({
                               Eliminar
                             </button>
                           </div>
+
                         </div>
                       )}
                     </div>
                   </div>
                 )}
+
                 {/* IMAGEN */}
                 {newNote.tipo === "image" && (
-                <div className="mb-4">
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Subir imagen
-                  </label>
+                  <div className="mb-4">
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    style={{ display: "none" }}
-                    id="imageInput"
-                  />
+                    <label
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#111827",
+                        display: "block",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Subir imagen
+                    </label>
 
-                  <div
-                    style={{
-                      backgroundColor: "#f9fafb",
-                      border: "2px dashed #e5e7eb",
-                      borderRadius: "6px",
-                      padding: "16px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {!imagePreview ? (
-                      <div>
-                        <label htmlFor="imageInput" style={{ display: "block", cursor: "pointer" }}>
-                          <div style={{ padding: "24px" }}>
-                            <p
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      style={{ display: "none" }}
+                      id="imageInput"
+                    />
+
+                    <div
+                      style={{
+                        backgroundColor: "#f9fafb",
+                        border: "2px dashed #e5e7eb",
+                        borderRadius: "6px",
+                        padding: "16px",
+                        textAlign: "center",
+                      }}
+                    >
+
+                      {!imagePreview ? (
+                        <div>
+
+                          <label
+                            htmlFor="imageInput"
+                            style={{
+                              display: "block",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div style={{ padding: "24px" }}>
+
+                              <p
+                                style={{
+                                  fontSize: "14px",
+                                  color: "#6b7280",
+                                  margin: 0,
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                Haz clic para seleccionar una imagen
+                              </p>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+
+                                  document
+                                    .getElementById("imageInput")
+                                    ?.click();
+                                }}
+                                style={{
+                                  padding: "10px 16px",
+                                  fontSize: "14px",
+                                  fontWeight: "500",
+                                  backgroundColor: "#2563eb",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Seleccionar imagen
+                              </button>
+                            </div>
+                          </label>
+                        </div>
+                      ) : (
+                        <div>
+
+                          <div
+                            style={{
+                              marginBottom: "12px",
+                              borderRadius: "6px",
+                              overflow: "hidden",
+                              backgroundColor: "#f0f0f0",
+                              maxHeight: "200px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
                               style={{
-                                fontSize: "14px",
-                                color: "#6b7280",
-                                margin: 0,
-                                marginBottom: "8px",
+                                maxWidth: "100%",
+                                maxHeight: "200px",
+                                objectFit: "contain",
                               }}
-                            >
-                              Haz clic para seleccionar una imagen
-                            </p>
+                            />
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px" }}>
 
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                document.getElementById("imageInput")?.click();
+                              onClick={async () => {
+
+                                setImageFile(null);
+
+                                if (imagePreview?.startsWith("blob:")) {
+                                  URL.revokeObjectURL(imagePreview);
+                                }
+
+                                setImagePreview(null);
                               }}
                               style={{
+                                flex: 1,
+                                padding: "10px 16px",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                backgroundColor: "#fecaca",
+                                color: "#7f1d1d",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Eliminar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                document
+                                  .getElementById("imageInput")
+                                  ?.click();
+                              }}
+                              style={{
+                                flex: 1,
                                 padding: "10px 16px",
                                 fontSize: "14px",
                                 fontWeight: "500",
@@ -1279,84 +1535,18 @@ export default function Notes({
                                 cursor: "pointer",
                               }}
                             >
-                              Seleccionar imagen
+                              Cambiar imagen
                             </button>
+
                           </div>
-                        </label>
-                      </div>
-                    ) : (
-                      <div>
-                        <div
-                          style={{
-                            marginBottom: "12px",
-                            borderRadius: "6px",
-                            overflow: "hidden",
-                            backgroundColor: "#f0f0f0",
-                            maxHeight: "200px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            style={{
-                              maxWidth: "100%",
-                              maxHeight: "200px",
-                              objectFit: "contain",
-                            }}
-                          />
                         </div>
-
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setImageFile(null);
-                              setImagePreview(null);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "10px 16px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              backgroundColor: "#fecaca",
-                              color: "#7f1d1d",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Eliminar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              document.getElementById("imageInput")?.click();
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "10px 16px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              backgroundColor: "#2563eb",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Cambiar imagen
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
               </form>
+
               {/* BOTONES */}
               <div
                 style={{
@@ -1367,21 +1557,42 @@ export default function Notes({
                   justifyContent: "flex-end",
                 }}
               >
+
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAddNoteModal(false);
+                  onClick={async () => {
 
-                    // RESET
-                    setAudioBlob(null);
-                    setRecordingTime(0);
-                    setImageFile(null);
-                    setImagePreview(null);
+                  if (mediaRecorder && isRecording) {
+                    stopRecording();
+                  }
 
-                    if (mediaRecorder && isRecording) {
-                      stopRecording();
-                    }
-                  }}
+                  if (audioPreview?.startsWith("blob:")) {
+                    URL.revokeObjectURL(audioPreview);
+                  }
+
+                  setAudioPreview("");
+                  setAudioBlob(null);  
+
+                  setShowAddNoteModal(false);
+
+                  setNewNote({
+                    tipo: "text",
+                    titulo: "",
+                    contenido: "",
+                    audioUrl: "",
+                    audioPublicId: "",
+                  });
+
+                  setRecordingTime(0);
+
+                  setImageFile(null);
+
+                  if (imagePreview?.startsWith("blob:")) {
+                    URL.revokeObjectURL(imagePreview);
+                  }
+                    
+                  setImagePreview(null);
+                }}
                   style={{
                     padding: "10px 16px",
                     fontSize: "14px",
@@ -1398,48 +1609,136 @@ export default function Notes({
 
                 <button
                   type="button"
-                  onClick={() => {
-                    // VALIDACIÓN
+                  onClick={async () => {
+
+                    // VALIDACIONES
                     if (!newNote.titulo.trim()) {
                       alert("Por favor, ingresa un título para la nota.");
                       return;
                     }
 
-                    if (newNote.tipo === "text" && !newNote.contenido.trim()) {
-                      alert("Por favor, ingresa contenido para la nota de texto.");
+                    if (
+                      newNote.tipo === "text" &&
+                      !newNote.contenido.trim()
+                    ) {
+                      alert(
+                        "Por favor, ingresa contenido para la nota de texto."
+                      );
                       return;
                     }
 
-                    if (newNote.tipo === "audio" && !audioBlob) {
+                    if (
+                      newNote.tipo === "audio" &&
+                      !audioBlob
+                    ) {
                       alert("Por favor, graba un audio.");
                       return;
                     }
 
-                    if (newNote.tipo === "image" && !imageFile) {
+                    if (
+                      newNote.tipo === "image" &&
+                      !imageFile
+                    ) {
                       alert("Por favor, sube una imagen.");
                       return;
                     }
 
-                    const noteData = {
-                      title: newNote.titulo,
-                      tipo: newNote.tipo,
-                      content: newNote.contenido || "",
-                      audioUrl: "",
-                      imageUrl: "",
-                      createdBy: `${currentUser.nombre} ${currentUser.apellido}`,
-                    };
-
-                    if (newNote.tipo === "audio" && audioBlob) {
-                      noteData.audioUrl = URL.createObjectURL(audioBlob);
-                      noteData.audioBlob = audioBlob;
-                    }
+                    let uploadedImageUrl = "";
+                    let uploadedImagePublicId = "";
 
                     if (newNote.tipo === "image" && imageFile) {
-                      noteData.imageUrl = imagePreview;
-                      noteData.imageFile = imageFile;
+
+                      const formData = new FormData();
+
+                      formData.append("file", imageFile);
+
+                      const response = await fetch(
+                        `${import.meta.env.VITE_API_URL}/api/upload/image`,
+                        {
+                          method: "POST",
+                          body: formData,
+                        }
+                      );
+
+                      if (!response.ok) {
+                        alert("Error subiendo imagen");
+                        return;
+                      }
+
+                      const data = await response.json();
+
+                      uploadedImageUrl = data.url;
+                      uploadedImagePublicId = data.publicId;
                     }
 
-                    addNote(noteData);
+                    let uploadedAudioUrl = "";
+                    let uploadedAudioPublicId = "";
+
+                    if (newNote.tipo === "audio" && audioBlob) {
+
+                      const formData = new FormData();
+
+                      formData.append("audio", audioBlob, "audio.webm");
+
+                      const response = await fetch(
+                        `${import.meta.env.VITE_API_URL}/api/upload/audio`,
+                        {
+                          method: "POST",
+                          body: formData,
+                        }
+                      );
+
+                      if (!response.ok) {
+                        alert("Error subiendo audio");
+                        return;
+                      }
+
+                      const data = await response.json();
+
+                      uploadedAudioUrl = data.url;
+                      uploadedAudioPublicId = data.publicId;
+                    }
+
+                    const noteData = {
+                      titulo: newNote.titulo,
+                      tipo: newNote.tipo,
+
+                      contenido:
+                        newNote.tipo === "text"
+                          ? newNote.contenido
+                          : "",
+
+                      audioUrl:
+                        newNote.tipo === "audio"
+                          ? uploadedAudioUrl
+                          : "",
+
+                      imageUrl:
+                        newNote.tipo === "image"
+                          ? uploadedImageUrl
+                          : "",
+
+                      audioPublicId:
+                        newNote.tipo === "audio"
+                          ? uploadedAudioPublicId
+                          : "",
+
+                      imagePublicId:
+                        newNote.tipo === "image"
+                          ? uploadedImagePublicId
+                          : "",   
+
+                      createdById: currentUser.id,
+                    };
+
+                    await addNote(noteData);
+
+                    if (audioPreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(audioPreview);
+                    }
+
+                    setAudioPreview("");
+                    setAudioBlob(null);
 
                     setShowAddNoteModal(false);
 
@@ -1448,12 +1747,17 @@ export default function Notes({
                       titulo: "",
                       contenido: "",
                       audioUrl: "",
-                      imageUrl: "",
+                      audioPublicId: "",
                     });
 
-                    setAudioBlob(null);
                     setRecordingTime(0);
+
                     setImageFile(null);
+
+                    if (imagePreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(imagePreview);
+                    }
+
                     setImagePreview(null);
                   }}
                   style={{
@@ -1489,7 +1793,32 @@ export default function Notes({
             justifyContent: "center",
             zIndex: 2000,
           }}
-          onClick={() => setShowEditNoteModal(false)}
+          onClick={async () => {
+
+            setShowEditNoteModal(false);
+
+            setEditAudioDeleted(false);
+
+            setEditRecordingTime(0);
+
+            setEditImageFile(null);
+
+            if (editImagePreview?.startsWith("blob:")) {
+              URL.revokeObjectURL(editImagePreview);
+            }
+
+            setEditImagePreview("");
+
+            setEditAudioPreview("");
+
+            setEditAudioPublicId("");
+
+            setEditImagePublicId("");
+
+            if (editMediaRecorder && editIsRecording) {
+              stopEditRecording();
+            }
+          }}
         >
           <div
             className="card rounded-3"
@@ -1501,6 +1830,8 @@ export default function Notes({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="card-body p-4">
+
+              {/* HEADER */}
               <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
                   <h2
@@ -1513,6 +1844,7 @@ export default function Notes({
                   >
                     Editar Nota
                   </h2>
+
                   <p
                     style={{
                       fontSize: "14px",
@@ -1523,13 +1855,30 @@ export default function Notes({
                     Actualiza los detalles de tu nota.
                   </p>
                 </div>
+
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+
                     setShowEditNoteModal(false);
-                    setEditAudioBlob(null);
+
+                    setEditAudioDeleted(false);
+
                     setEditRecordingTime(0);
+
                     setEditImageFile(null);
+
+                    if (editImagePreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(editImagePreview);
+                    }
+
                     setEditImagePreview(null);
+
+                    setEditAudioPreview("");
+
+                    setEditAudioPublicId("");
+
+                    setEditImagePublicId("");
+
                     if (editMediaRecorder && editIsRecording) {
                       stopEditRecording();
                     }
@@ -1548,6 +1897,8 @@ export default function Notes({
               </div>
 
               <form>
+
+                {/* TIPO */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -1560,6 +1911,7 @@ export default function Notes({
                   >
                     Tipo de nota <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+
                   <select
                     className="form-select"
                     disabled
@@ -1578,6 +1930,7 @@ export default function Notes({
                     <option value="audio">Audio</option>
                     <option value="image">Imagen</option>
                   </select>
+
                   <p
                     style={{
                       fontSize: "12px",
@@ -1590,6 +1943,7 @@ export default function Notes({
                   </p>
                 </div>
 
+                {/* TITULO */}
                 <div className="mb-3">
                   <label
                     style={{
@@ -1603,6 +1957,7 @@ export default function Notes({
                     Título de la nota{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+
                   <input
                     type="text"
                     placeholder="Ej: Ideas para el proyecto..."
@@ -1623,8 +1978,10 @@ export default function Notes({
                   />
                 </div>
 
+                {/* TEXT */}
                 {editingNote.tipo === "text" && (
                   <div className="mb-4">
+
                     <label
                       style={{
                         fontSize: "14px",
@@ -1636,6 +1993,7 @@ export default function Notes({
                     >
                       Contenido
                     </label>
+
                     <textarea
                       placeholder="Escribe el contenido de tu nota..."
                       className="form-control"
@@ -1658,8 +2016,10 @@ export default function Notes({
                   </div>
                 )}
 
+                {/* AUDIO */}
                 {editingNote.tipo === "audio" && (
                   <div className="mb-4">
+
                     <label
                       style={{
                         fontSize: "14px",
@@ -1671,6 +2031,7 @@ export default function Notes({
                     >
                       Grabar audio
                     </label>
+
                     <div
                       style={{
                         backgroundColor: "#f9fafb",
@@ -1679,9 +2040,12 @@ export default function Notes({
                         padding: "16px",
                       }}
                     >
-                      {!editAudioBlob && 
+
+                      {!editAudioPreview &&
                       (!editingNote.audioUrl || editAudioDeleted) ? (
+
                         <div>
+
                           <div
                             style={{
                               display: "flex",
@@ -1689,6 +2053,7 @@ export default function Notes({
                               marginBottom: "12px",
                             }}
                           >
+
                             {!editIsRecording ? (
                               <button
                                 type="button"
@@ -1720,6 +2085,7 @@ export default function Notes({
                                   gap: "8px",
                                 }}
                               >
+
                                 <button
                                   type="button"
                                   onClick={stopEditRecording}
@@ -1748,8 +2114,10 @@ export default function Notes({
                                       borderRadius: "50%",
                                     }}
                                   ></span>
+
                                   Detener
                                 </button>
+
                                 <div
                                   style={{
                                     padding: "10px 16px",
@@ -1762,15 +2130,17 @@ export default function Notes({
                                     alignItems: "center",
                                   }}
                                 >
-                                  {Math.floor(editRecordingTime / 60)}
-                                  {":"}
+                                  {Math.floor(editRecordingTime / 60)}:
                                   {(editRecordingTime % 60)
                                     .toString()
                                     .padStart(2, "0")}
                                 </div>
+
                               </div>
                             )}
+
                           </div>
+
                           {editIsRecording && (
                             <p
                               style={{
@@ -1783,8 +2153,11 @@ export default function Notes({
                             </p>
                           )}
                         </div>
-                      ) : editAudioBlob || (editingNote.audioUrl && !editAudioDeleted) ? (
+
+                      ) : (
+
                         <div>
+
                           <div
                             style={{
                               backgroundColor: "#e0f2fe",
@@ -1802,7 +2175,7 @@ export default function Notes({
                             >
                               <source
                                 src={
-                                  editAudioBlob
+                                  editAudioPreview
                                     ? editAudioPreview
                                     : !editAudioDeleted
                                       ? editingNote.audioUrl
@@ -1810,9 +2183,9 @@ export default function Notes({
                                 }
                                 type="audio/webm"
                               />
-                              Tu navegador no soporta el elemento de audio.
                             </audio>
                           </div>
+
                           <div
                             style={{
                               display: "flex",
@@ -1821,7 +2194,7 @@ export default function Notes({
                           >
                             <button
                               type="button"
-                              onClick={() => deleteEditRecording()}
+                              onClick={deleteEditRecording}
                               style={{
                                 flex: 1,
                                 padding: "10px 16px",
@@ -1838,13 +2211,15 @@ export default function Notes({
                             </button>
                           </div>
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 )}
 
+                {/* IMAGE */}
                 {editingNote.tipo === "image" && (
                   <div className="mb-4">
+
                     <label
                       style={{
                         fontSize: "14px",
@@ -1856,6 +2231,7 @@ export default function Notes({
                     >
                       Subir imagen
                     </label>
+
                     <input
                       type="file"
                       accept="image/*"
@@ -1865,6 +2241,7 @@ export default function Notes({
                       }}
                       id="editImageInput"
                     />
+
                     <div
                       style={{
                         backgroundColor: "#f9fafb",
@@ -1874,8 +2251,11 @@ export default function Notes({
                         textAlign: "center",
                       }}
                     >
+
                       {!(editImagePreview || (editingNote.imageUrl && !editImageDeleted)) ? (
+
                         <div>
+
                           <label
                             htmlFor="editImageInput"
                             style={{
@@ -1888,6 +2268,7 @@ export default function Notes({
                                 padding: "24px",
                               }}
                             >
+
                               <p
                                 style={{
                                   fontSize: "14px",
@@ -1898,10 +2279,12 @@ export default function Notes({
                               >
                                 Haz clic para seleccionar una imagen
                               </p>
+
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
+
                                   document
                                     .getElementById("editImageInput")
                                     ?.click();
@@ -1922,8 +2305,11 @@ export default function Notes({
                             </div>
                           </label>
                         </div>
+
                       ) : (
+
                         <div>
+
                           <div
                             style={{
                               marginBottom: "12px",
@@ -1952,18 +2338,42 @@ export default function Notes({
                               }}
                             />
                           </div>
+
                           <div
                             style={{
                               display: "flex",
                               gap: "8px",
                             }}
                           >
+
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
+
+                                if (
+                                  editImagePublicId &&
+                                  editImagePublicId !== editingNote?.imagePublicId
+                                ) {
+
+                                  await fetch(
+                                    `${import.meta.env.VITE_API_URL}/api/upload/image/${editImagePublicId}`,
+                                    {
+                                      method: "DELETE",
+                                    }
+                                  );
+                                }
+
                                 setEditImageFile(null);
+
+                                if (editImagePreview?.startsWith("blob:")) {
+                                  URL.revokeObjectURL(editImagePreview);
+                                }
+
                                 setEditImagePreview(null);
+
                                 setEditImageDeleted(true);
+
+                                setEditImagePublicId("");
                               }}
                               style={{
                                 flex: 1,
@@ -1979,6 +2389,7 @@ export default function Notes({
                             >
                               Eliminar
                             </button>
+
                             <button
                               type="button"
                               onClick={() => {
@@ -2000,6 +2411,7 @@ export default function Notes({
                             >
                               Cambiar imagen
                             </button>
+
                           </div>
                         </div>
                       )}
@@ -2007,6 +2419,7 @@ export default function Notes({
                   </div>
                 )}
 
+                {/* BOTONES */}
                 <div
                   style={{
                     borderTop: "1px solid #e5e7eb",
@@ -2016,19 +2429,35 @@ export default function Notes({
                     justifyContent: "flex-end",
                   }}
                 >
+
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowEditNoteModal(false);
-                      setEditAudioBlob(null);
-                      setEditAudioDeleted(false);
-                      setEditRecordingTime(0);
-                      setEditImageFile(null);
-                      setEditImagePreview(editingNote?.imageUrl || null);
-                      if (editMediaRecorder && editIsRecording) {
-                        stopEditRecording();
-                      }
-                    }}
+                    onClick={async () => {
+
+                    setShowEditNoteModal(false);
+
+                    setEditAudioDeleted(false);
+
+                    setEditRecordingTime(0);
+
+                    setEditImageFile(null);
+
+                    if (editImagePreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(editImagePreview);
+                    }
+
+                    setEditImagePreview("");
+
+                    setEditAudioPreview("");
+
+                    setEditAudioPublicId("");
+
+                    setEditImagePublicId("");
+
+                    if (editMediaRecorder && editIsRecording) {
+                      stopEditRecording();
+                    }
+                  }}
                     style={{
                       padding: "10px 16px",
                       fontSize: "14px",
@@ -2042,9 +2471,11 @@ export default function Notes({
                   >
                     Cancelar
                   </button>
+
                   <button
                     type="button"
                     onClick={async () => {
+
                       if (!editNoteFormData.titulo.trim()) {
                         alert("Por favor, ingresa un título para la nota.");
                         return;
@@ -2060,7 +2491,7 @@ export default function Notes({
 
                       if (
                         editingNote.tipo === "audio" &&
-                        !editAudioBlob &&
+                        !editAudioPreview &&
                         (!editingNote.audioUrl || editAudioDeleted)
                       ) {
                         alert("Graba un audio o mantén el existente.");
@@ -2070,48 +2501,145 @@ export default function Notes({
                       if (
                         editingNote.tipo === "image" &&
                         !editImageFile &&
-                        !(editImagePreview || (editingNote.imageUrl && !editImageDeleted))
+                        !(
+                          editImagePreview ||
+                          (editingNote.imageUrl && !editImageDeleted)
+                        )
                       ) {
                         alert("Sube una imagen o mantén la existente.");
                         return;
                       }
 
                       let imageUrl = editingNote.imageUrl;
+                      let imagePublicId = editingNote.imagePublicId;
+                      let uploadedAudioUrl = editingNote.audioUrl;
+                      let uploadedAudioPublicId = editingNote.audioPublicId;  
 
                       if (editingNote.tipo === "image") {
-                        if (editImageFile) {
-                          imageUrl = await fileToBase64(editImageFile);
-                        } else if (editImageDeleted) {
+
+                        if (editImageDeleted) {
+
                           imageUrl = "";
+                          imagePublicId = "";
+                        }
+
+                        if (editImageFile) {
+
+                          const formData = new FormData();
+
+                          formData.append("file", editImageFile);
+
+                          const response = await fetch(
+                            `${import.meta.env.VITE_API_URL}/api/upload/image`,
+                            {
+                              method: "POST",
+                              body: formData,
+                            }
+                          );
+
+                          if (!response.ok) {
+                            alert("Error subiendo imagen");
+                            return;
+                          }
+
+                          const data = await response.json();
+
+                          imageUrl = data.url;
+                          imagePublicId = data.publicId;
+                        }
+                      }
+
+                      if (editingNote.tipo === "audio") {
+
+                        if (editAudioDeleted) {
+
+                          uploadedAudioUrl = "";
+                          uploadedAudioPublicId = "";
+                        }
+
+                        if (editAudioBlob) {
+
+                          const formData = new FormData();
+
+                          formData.append("audio", editAudioBlob, "audio.webm");
+
+                          const response = await fetch(
+                            `${import.meta.env.VITE_API_URL}/api/upload/audio`,
+                            {
+                              method: "POST",
+                              body: formData,
+                            }
+                          );
+
+                          if (!response.ok) {
+                            alert("Error subiendo audio");
+                            return;
+                          }
+
+                          const data = await response.json();
+
+                          uploadedAudioUrl = data.url;
+                          uploadedAudioPublicId = data.publicId;
                         }
                       }
 
                       const updatedNote = {
                         id: editingNote.id,
-                        title: editNoteFormData.titulo,
+
+                        titulo: editNoteFormData.titulo,
+
                         tipo: editingNote.tipo,
 
-                        content:
+                        contenido:
                           editingNote.tipo === "text"
                             ? editNoteFormData.contenido
                             : "",
 
                         audioUrl:
                           editingNote.tipo === "audio"
-                            ? editAudioBlob
-                              ? editAudioPreview
-                              : editAudioDeleted
-                                ? ""
-                                : editingNote.audioUrl
+                            ? uploadedAudioUrl
                             : "",
 
                         imageUrl,
+
+                        audioPublicId:
+                          editingNote.tipo === "audio"
+                            ? uploadedAudioPublicId
+                            : "",
+
+                        imagePublicId: imagePublicId,
                       };
 
-                      updateNote(updatedNote);
+                      if (
+                        editingNote.imagePublicId &&
+                        editingNote.imagePublicId !== updatedNote.imagePublicId
+                      ) {
 
-                      // RESET
+                        await fetch(
+                          `${import.meta.env.VITE_API_URL}/api/upload/image/${editingNote.imagePublicId}`,
+                          {
+                            method: "DELETE",
+                          }
+                        );
+                      }
+
+                      if (
+                        editingNote.audioPublicId &&
+                        editingNote.audioPublicId !== updatedNote.audioPublicId
+                      ) {
+
+                        await fetch(
+                          `${import.meta.env.VITE_API_URL}/api/upload/audio/${editingNote.audioPublicId}`,
+                          {
+                            method: "DELETE",
+                          }
+                        );
+                      }
+
+                      await updateNote(updatedNote);
+
                       setShowEditNoteModal(false);
+
                       setEditingNote(null);
 
                       setEditNoteFormData({
@@ -2119,13 +2647,33 @@ export default function Notes({
                         contenido: "",
                         audioUrl: "",
                         imageUrl: "",
+                        audioPublicId: "",
+                        imagePublicId: "",
                       });
 
-                      setEditAudioBlob(null);
                       setEditAudioDeleted(false);
+
                       setEditRecordingTime(0);
+
                       setEditImageFile(null);
+
+                      if (editImagePreview?.startsWith("blob:")) {
+                        URL.revokeObjectURL(editImagePreview);
+                      }
+
                       setEditImagePreview(null);
+
+                      if (editAudioPreview?.startsWith("blob:")) {
+                        URL.revokeObjectURL(editAudioPreview);
+                      }
+
+                      setEditAudioBlob(null);
+
+                      setEditAudioPreview("");
+
+                      setEditAudioPublicId("");
+
+                      setEditImagePublicId("");
                     }}
                     style={{
                       padding: "10px 16px",

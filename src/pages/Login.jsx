@@ -11,7 +11,7 @@ export default function Login({
 
   const [formData, setFormData] = useState({
     email: "",
-    contrasena: "",
+    password: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -23,8 +23,8 @@ export default function Login({
       newErrors.email = "Introduce un email";
     }
 
-    if (!formData.contrasena.trim()) {
-      newErrors.contrasena =
+    if (!formData.password.trim()) {
+      newErrors.password =
         "Introduce una contraseña";
     }
 
@@ -36,7 +36,7 @@ export default function Login({
 
     const result = await login(
       formData.email,
-      formData.contrasena,
+      formData.password,
     );
 
     if (!result.success) {
@@ -268,16 +268,16 @@ export default function Login({
                 type="password"
                 className="form-control"
                 placeholder="Tu contraseña"
-                value={formData.contrasena}
+                value={formData.password}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    contrasena: e.target.value,
+                    password: e.target.value,
                   })
                 }
                 style={{
                   borderRadius: "8px",
-                  borderColor: errors.contrasena
+                  borderColor: errors.password
                     ? "#ef4444"
                     : "#e5e7eb",
                   fontSize: "14px",
@@ -285,7 +285,7 @@ export default function Login({
                 }}
               />
 
-              {errors.contrasena && (
+              {errors.password && (
                 <p
                   style={{
                     color: "#ef4444",
@@ -294,7 +294,7 @@ export default function Login({
                     marginBottom: 0,
                   }}
                 >
-                  {errors.contrasena}
+                  {errors.password}
                 </p>
               )}
             </div>

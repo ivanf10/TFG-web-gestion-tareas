@@ -4,6 +4,8 @@ import { useAuth } from "../hooks/useAuth";
 
 export default function Users({
   allUsers,
+  allTasks,
+  allNotes,
 
   addUser,
   updateUser,
@@ -33,7 +35,7 @@ export default function Users({
   setEditUserFormData,
 }) {
 
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
@@ -148,6 +150,77 @@ export default function Users({
         .toLowerCase()
         .includes(userSearchQuery.toLowerCase())
     );
+
+    const getDeleteMessage = (user) => {
+
+      const createdTasks = (allTasks || []).filter(
+        (task) => task.createdById === user.id
+      ).length;
+
+      const assignedTasks = (allTasks || []).filter(
+        (task) => task.assignedToId === user.id
+      ).length;
+
+      const notes = (allNotes || []).filter(
+        (note) => note.createdById === user.id
+      ).length;
+
+      const isAdmin = user.rol === "Admin";
+
+      const tasksAssignedToOthers = (allTasks || []).filter(
+        (task) =>
+          task.createdById === user.id &&
+          task.assignedToId &&
+          task.assignedToId !== user.id
+      ).length;
+
+      const items = [];
+
+      if (notes > 0) {
+        items.push(`${notes} nota${notes > 1 ? "s" : ""}`);
+      }
+
+      if (createdTasks > 0) {
+        items.push(
+          `${createdTasks} tarea${createdTasks > 1 ? "s" : ""} creada${createdTasks > 1 ? "s" : ""}`
+        );
+      }
+
+      if (assignedTasks > 0) {
+        items.push(
+          `${assignedTasks} tarea${assignedTasks > 1 ? "s" : ""} asignada${assignedTasks > 1 ? "s" : ""}`
+        );
+      }
+
+      const isCurrentUser =
+        currentUser?.id === user.id;
+
+      if (items.length === 0) {
+        return isCurrentUser
+          ? "Estás eliminando tu propia cuenta. Se cerrará la sesión automáticamente. ¿Continuar?"
+          : "¿Seguro que quieres eliminar este usuario?";
+      }
+
+      return [
+        "Este usuario tiene:",
+        "",
+        ...items.map(item => `• ${item}`),
+        "",
+        notes > 0 || createdTasks > 0 || assignedTasks > 0
+          ? "Al eliminarlo se borrarán automáticamente todas las notas y tareas relacionadas con este usuario."
+          : "",
+        "",
+        isAdmin && tasksAssignedToOthers > 0
+          ? `También se eliminarán ${tasksAssignedToOthers} tarea${tasksAssignedToOthers > 1 ? "s" : ""} asignada${tasksAssignedToOthers > 1 ? "s" : ""} a otros usuarios por este administrador.`
+          : "",
+        "",
+        isCurrentUser ? "Además se cerrará tu sesión." : "",
+        "",
+        "¿Continuar?"
+      ]
+      .filter(Boolean)
+      .join("\n");
+    };
 
   if (currentUser?.rol !== "Admin") {
     return null;
@@ -608,17 +681,25 @@ export default function Users({
 
                           <button
                             onClick={async () => {
-                              if (
-                                window.confirm(
-                                  "¿Seguro que quieres eliminar este usuario?",
-                                )
-                              ) {
+                              const isCurrentUser =
+                                currentUser?.id === user.id;
+
+                              const confirmed = window.confirm(
+                                getDeleteMessage(user)
+                              );
+
+                              if (confirmed) {
+
                                 await deleteUser(user.id);
 
                                 await fetchDepartments();
 
                                 setShowUserDetailModal(false);
                                 setSelectedUserForDetail(null);
+
+                                if (isCurrentUser) {
+                                  logout();
+                                }
                               }
                             }}
                             style={{
@@ -1598,17 +1679,26 @@ export default function Users({
               >
                 <button
                   onClick={async () => {
-                    if (
-                      window.confirm(
-                        "¿Seguro que quieres eliminar este usuario?",
-                      )
-                    ) {
+
+                    const isCurrentUser =
+                      currentUser?.id === selectedUserForDetail.id;
+
+                    const confirmed = window.confirm(
+                      getDeleteMessage(selectedUserForDetail)
+                    );
+
+                    if (confirmed) {
+
                       await deleteUser(selectedUserForDetail.id);
 
                       await fetchDepartments();
 
                       setShowUserDetailModal(false);
                       setSelectedUserForDetail(null);
+
+                      if (isCurrentUser) {
+                        logout();
+                      }
                     }
                   }}
                   style={{

@@ -164,7 +164,13 @@ export default function Layout() {
 
   // RENDER
   return (
-    <div className="d-flex">
+    <div
+      className="d-flex"
+      style={{
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
       {/* SIDEBAR */}
       <Sidebar
         activeView={activeView}
@@ -177,7 +183,8 @@ export default function Layout() {
       <main
         className="flex-grow-1 w-100"
         style={{
-          minHeight: "100vh",
+          height: "100vh",
+          overflowY: "auto",
           backgroundColor: "#f9fafb",
         }}
       >
@@ -285,6 +292,8 @@ export default function Layout() {
         {activeView === "usuarios" && (
           <Users
             allUsers={allUsers}
+            allTasks={allTasks}
+            allNotes={allNotes}
 
             addUser={addUser}
             updateUser={updateUser}

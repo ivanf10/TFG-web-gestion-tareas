@@ -23,6 +23,28 @@ export default function Tasks({
 
   const { currentUser } = useAuth();
 
+  const formatDate = (date) => {
+    if (!date) return "Sin fecha";
+
+    return new Date(date).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return "—";
+
+    return new Date(date).toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const visibleTasks =
     currentUser?.rol === "Admin"
       ? allTasks
@@ -515,7 +537,66 @@ export default function Tasks({
                   </thead>
 
                   <tbody>
-                    {currentTasks.map((task) => {
+                    {currentTasks.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="6"
+                          style={{
+                            padding: "60px 20px",
+                            textAlign: "center",
+                            borderBottom: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "12px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "56px",
+                                height: "56px",
+                                borderRadius: "50%",
+                                backgroundColor: "#f3f4f6",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#6b7280",
+                              }}
+                            >
+                              <ClipboardList size={26} strokeWidth={1.8} />
+                            </div>
+
+                            <div>
+                              <h3
+                                style={{
+                                  fontSize: "16px",
+                                  fontWeight: "600",
+                                  color: "#111827",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                No se encontraron resultados
+                              </h3>
+
+                              <p
+                                style={{
+                                  fontSize: "14px",
+                                  color: "#6b7280",
+                                  marginBottom: 0,
+                                }}
+                              >
+                                Prueba cambiando los filtros o el texto de búsqueda.
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      currentTasks.map((task) => {
                       const status = getTaskStatus(task);
 
                       return (
@@ -555,7 +636,7 @@ export default function Tasks({
                           </td>
 
                           <td style={{ fontSize: "14px", color: "#4b5563" }}>
-                            {task.fechaLimite ? task.fechaLimite.split("T")[0] : "Sin fecha"}
+                            {formatDate(task.fechaLimite)}
                           </td>
 
                           <td style={{ fontSize: "14px" }}>
@@ -672,7 +753,8 @@ export default function Tasks({
                           </td>
                         </tr>
                       );
-                    })}
+                    })
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -1115,8 +1197,6 @@ export default function Tasks({
                           return;
                         }
 
-                        console.log("CURRENT USER:", currentUser);
-
                         addTask({
                           titulo: newTask.titulo,
 
@@ -1127,6 +1207,8 @@ export default function Tasks({
                           fechaLimite: newTask.fechaLimite,
 
                           enviarRecordatorio: newTask.recordatorio,
+
+                          recordatorioActivo: newTask.recordatorio,
 
                           completed: newTask.estado === "Completada",
 
@@ -1389,9 +1471,7 @@ export default function Tasks({
                               marginBottom: 0,
                             }}
                           >
-                            {selectedTask.assignedTo
-                              ? `${selectedTask.assignedTo.nombre} ${selectedTask.assignedTo.apellido}`
-                              : "Sin asignar"}
+                            {selectedTask.assignedTo?.rol || "Usuario"}
                           </p>
                         </div>
                       </div>
@@ -1459,7 +1539,7 @@ export default function Tasks({
                               marginBottom: 0,
                             }}
                           >
-                            Usuario creador
+                            {selectedTask.createdBy?.rol || "Usuario"}
                           </p>
                         </div>
                       </div>
@@ -1492,7 +1572,7 @@ export default function Tasks({
                         }}
                       >
                         <span style={{ fontSize: "16px" }}>📅</span>
-                        {selectedTask.fechaLimite || "Sin fecha"}
+                        {formatDate(selectedTask.fechaLimite)}
                       </p>
                     </div>
 
@@ -1520,7 +1600,7 @@ export default function Tasks({
                         }}
                       >
                         <span style={{ fontSize: "16px" }}>🕒</span>
-                        {selectedTask.createdAt || "—"}
+                        {formatDateTime(selectedTask.createdAt)}
                       </p>
                     </div>
                   </div>
@@ -1711,7 +1791,9 @@ export default function Tasks({
                             strokeLinejoin="round"
                           />
                         </svg>
-                        Marcar Completada
+                        {selectedTask.completed
+                          ? "Marcar Pendiente"
+                          : "Marcar Completada"}
                       </button>
                     </div>
                   </div>
@@ -2114,6 +2196,9 @@ export default function Tasks({
 
                             enviarRecordatorio:
                               editFormData.recordatorio,
+
+                            recordatorioActivo:
+                              editFormData.recordatorio,  
 
                             completed:
                               editFormData.estado === "Completada",

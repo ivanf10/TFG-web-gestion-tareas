@@ -32,15 +32,14 @@ export default function Home({
     ? allTasks
     : allTasks.filter(
         (task) =>
-          task.assignedTo ===
-          `${currentUser.nombre} ${currentUser.apellido}`,
+          task.assignedTo?.id === currentUser.id
       );
 
   // Tareas del día seleccionado
   const tasks = visibleTasks.filter((task) => {
-    if (!task.dueDate) return false;
+    if (!task.fechaLimite) return false;
 
-    const taskDate = new Date(task.dueDate);
+    const taskDate = new Date(task.fechaLimite);
 
     return (
       taskDate.toDateString() ===
@@ -56,9 +55,9 @@ export default function Home({
   const lateTasksCount = visibleTasks.filter((t) => {
     if (t.completed) return false;
 
-    if (!t.dueDate) return false;
+    if (!t.fechaLimite) return false;
 
-    const taskDate = new Date(t.dueDate);
+    const taskDate = new Date(t.fechaLimite);
     taskDate.setHours(0, 0, 0, 0);
 
     return taskDate < today;
@@ -66,18 +65,28 @@ export default function Home({
 
   // Notificaciones: tareas con recordatorio para hoy o fechas pasadas
   const reminderTasks = visibleTasks.filter((task) => {
-    if (!task.recordatorio) return false;
 
-    if (!task.dueDate) return false;
+    if (!task.enviarRecordatorio) return false;
 
-    const dueDate = new Date(task.dueDate);
+    // Compatibilidad con tareas antiguas
+    const reminderEnabled =
+      task.recordatorioActivo ?? true;
+
+    if (!reminderEnabled) return false;
+
+    if (task.completed) return false;
+
+    if (!task.fechaLimite) return false;
+
+    const dueDate = new Date(task.fechaLimite);
+
     dueDate.setHours(0, 0, 0, 0);
 
     return dueDate <= today;
   });
 
   const unreadNotifications = reminderTasks.filter(
-    (task) => !notificationReadIds.includes(task.id)
+    (task) => !notificationReadIds.includes(String(task.id))
   );
 
   // Estadísticas (solo números dinámicos)
@@ -123,13 +132,13 @@ export default function Home({
 
         notifications={reminderTasks.map((task) => ({
           ...task,
-          read: notificationReadIds.includes(task.id),
+          read: notificationReadIds.includes(String(task.id)),
         }))}
 
         unreadCount={
           reminderTasks.filter(
             (task) =>
-              !notificationReadIds.includes(task.id)
+              !notificationReadIds.includes(String(task.id))
           ).length
         }
 
@@ -259,6 +268,28 @@ export default function Home({
                         />
                       );
                     }
+
+                    const dayTasks = visibleTasks.filter((task) => {
+                      if (!task.fechaLimite) return false;
+
+                      const taskDate = new Date(task.fechaLimite);
+
+                      return (
+                        taskDate.toDateString() ===
+                        item.date.toDateString()
+                      );
+                    });
+
+                    const hasTasks = dayTasks.length > 0;
+
+                    const hasPendingOrLate = dayTasks.some(
+                      (task) => !task.completed
+                    );
+
+                    const dotColor = hasPendingOrLate
+                      ? "#ca8a04"
+                      : "#16a34a";
+
                     return (
                       <button
                         key={idx}
@@ -267,6 +298,7 @@ export default function Home({
                           minHeight: "40px",
                           minWidth: "40px",
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
                           borderRadius: "8px",
@@ -296,7 +328,21 @@ export default function Home({
                           }
                         }}
                       >
-                        {item.date.getDate()}
+                        <span>
+                          {item.date.getDate()}
+                        </span>
+
+                        {hasTasks && (
+                          <span
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "50%",
+                              backgroundColor: dotColor,
+                              marginTop: "3px",
+                            }}
+                          />
+                        )}
                       </button>
                     );
                   })}
@@ -360,66 +406,186 @@ export default function Home({
                   )}
 
                   {/* LISTADO */}
-                  {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="d-flex align-items-start gap-3 p-2"
-                      style={{
-                        borderRadius: "8px",
-                        transition: "background-color 0.2s",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#f9fafb")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
-                    >
-                      {/* CHECK */}
-                      <input
-                        type="checkbox"
-                        checked={task.completed || false}
-                        onChange={() => toggleTaskStatus(task.id)}
-                        style={{
-                          marginTop: "4px",
-                          width: "16px",
-                          height: "16px",
-                          borderRadius: "50%",
-                          border: "1px solid #d1d5db",
-                          accentColor: "#3f63eb",
-                          cursor: "pointer",
+                  {tasks.map((task) => {
+                    const fullName = task.assignedTo
+                      ? `${task.assignedTo.nombre} ${task.assignedTo.apellido}`
+                      : "Sin asignar";
+
+                    const initials = task.assignedTo
+                      ? `${task.assignedTo.nombre?.charAt(0) || ""}${
+                          task.assignedTo.apellido?.charAt(0) || ""
+                        }`.toUpperCase()
+                      : "?";
+
+                    const taskDate = new Date(task.fechaLimite);
+                    taskDate.setHours(0, 0, 0, 0);
+
+                    const isLate =
+                      !task.completed && taskDate < today;
+
+                    const statusLabel = task.completed
+                      ? "Completada"
+                      : isLate
+                      ? "Atrasada"
+                      : "Pendiente";
+
+                    const statusStyles = task.completed
+                      ? {
+                          backgroundColor: "#dcfce7",
+                          color: "#166534",
+                        }
+                      : isLate
+                      ? {
+                          backgroundColor: "#fee2e2",
+                          color: "#dc2626",
+                        }
+                      : {
+                          backgroundColor: "#fef3c7",
+                          color: "#ca8a04",
+                        };  
+
+                    return (
+                      <div
+                        key={task.id}
+                        className="d-flex align-items-start justify-content-between p-3"
+                        onClick={() => {
+                          setActiveView("tareas");
+                          setSelectedTask(task);
                         }}
-                      />
+                        style={{
+                          borderRadius: "12px",
+                          transition: "all 0.2s",
+                          cursor: "pointer",
+                          border: "1px solid #f1f5f9",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#f9fafb";
+                          e.currentTarget.style.borderColor = "#e5e7eb";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.borderColor = "#f1f5f9";
+                        }}
+                      >
+                        <div
+                          className="d-flex align-items-start gap-3"
+                          style={{ flex: 1 }}
+                        >
+                          {/* CHECK */}
+                          <input
+                            type="checkbox"
+                            checked={task.completed || false}
+                            onChange={() => toggleTaskStatus(task)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              marginTop: "4px",
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "50%",
+                              border: "1px solid #d1d5db",
+                              accentColor: "#3f63eb",
+                              cursor: "pointer",
+                              flexShrink: 0,
+                            }}
+                          />
 
-                      {/* TEXTO */}
-                      <div className="flex-grow-1">
-                        <p
+                          {/* CONTENIDO */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                marginBottom: "10px",
+                                color: task.completed ? "#9ca3af" : "#111827",
+                                textDecoration: task.completed
+                                  ? "line-through"
+                                  : "none",
+                              }}
+                            >
+                              {task.titulo || "Sin título"}
+                            </p>
+
+                            {/* BADGES */}
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "8px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {/* USUARIO */}
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "5px 10px",
+                                  borderRadius: "999px",
+                                  backgroundColor: "#eef2ff",
+                                  color: "#4338ca",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {fullName}
+                              </span>
+
+                              {/* DEPARTAMENTO */}
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "5px 10px",
+                                  borderRadius: "999px",
+                                  backgroundColor: "#f3f4f6",
+                                  color: "#4b5563",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {task.departamento?.nombre ||
+                                  "Sin departamento"}
+                              </span>
+
+                              {/* ESTADO */}
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "5px 10px",
+                                  borderRadius: "999px",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  ...statusStyles,
+                                }}
+                              >
+                                {statusLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* AVATAR */}
+                        <div
                           style={{
+                            width: "42px",
+                            height: "42px",
+                            minWidth: "42px",
+                            borderRadius: "50%",
+                            backgroundColor: "#dbeafe",
+                            color: "#1d4ed8",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                             fontSize: "14px",
-                            fontWeight: "500",
-                            marginBottom: "4px",
-                            color: task.completed ? "#9ca3af" : "#111827",
-                            textDecoration: task.completed
-                              ? "line-through"
-                              : "none",
+                            fontWeight: "700",
+                            marginLeft: "12px",
                           }}
                         >
-                          {task.title || "Sin título"}
-                        </p>
-
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#6b7280",
-                            marginBottom: "0",
-                          }}
-                        >
-                          {task.departamentos?.join(", ") || "Sin departamentos asignados"}
-                        </p>
+                          {initials}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

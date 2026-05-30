@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -10,16 +10,12 @@ export default function Account({
     useState(false);
 
   const {
-		currentUser,
-		updateCurrentUser,
-		changePassword,
-		logout,
-		users,
-		setUsers,
-	} = useAuth();
+    currentUser,
+    updateCurrentUser,
+    logout,
+  } = useAuth();
 
-	const [accountData, setAccountData] =
-		useState(currentUser);
+	const [accountData, setAccountData] = useState(currentUser || {});
 
   // DATOS TEMPORALES DE EDICIÓN
   const [editAccountData, setEditAccountData] = useState(accountData);
@@ -74,6 +70,46 @@ export default function Account({
 			new: false,
 			confirm: false,
 		});
+
+  const changePassword = async (
+    currentPassword,
+    newPassword
+  ) => {
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/users/change-password`,
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          userId: currentUser.id,
+          currentPassword,
+          newPassword,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error,
+      };
+    }
+
+    return {
+      success: true,
+    };
+  };  
+
+  useEffect(() => {
+    setAccountData(currentUser);
+  }, [currentUser]);
 
   return (
     <div className="p-3 p-md-5">
@@ -160,8 +196,8 @@ export default function Account({
                     marginBottom: "16px",
                   }}
                 >
-                  {accountData.nombre.charAt(0)}
-                  {accountData.apellido.charAt(0)}
+                  {accountData.nombre?.charAt(0)}
+                  {accountData.apellido?.charAt(0)}
                 </div>
 
                 <h3
@@ -239,9 +275,9 @@ export default function Account({
                   }}
                 >
                   {accountData.departamentos?.length ? (
-                    accountData.departamentos.map((dept, index) => (
+                    accountData.departamentos.map((dept) => (
                       <span
-                        key={index}
+                        key={dept.id}
                         style={{
                           display: "inline-block",
                           padding: "4px 8px",
@@ -252,7 +288,7 @@ export default function Account({
                           fontWeight: "500",
                         }}
                       >
-                        {dept}
+                        {dept.nombre}
                       </span>
                     ))
                   ) : (
@@ -504,9 +540,9 @@ export default function Account({
                       }}
                     >
                       {accountData.departamentos?.length ? (
-                        accountData.departamentos.map((dept, index) => (
+                        accountData.departamentos.map((dept) => (
                           <span
-                            key={index}
+                            key={dept.id}
                             style={{
                               display: "inline-block",
                               padding: "4px 8px",
@@ -517,7 +553,7 @@ export default function Account({
                               fontWeight: "500",
                             }}
                           >
-                            {dept}
+                            {dept.nombre}
                           </span>
                         ))
                       ) : (
@@ -689,12 +725,16 @@ export default function Account({
                     </button>
 
                    <button
-                      onClick={() => {
-                        if (isDemoAccount) return;
+                      onClick={async () => {
 
-                        updateCurrentUser(editAccountData);
+                        const result =
+                          await updateCurrentUser(
+                            editAccountData
+                          );
 
-                        setAccountData(editAccountData);
+                        if (!result?.success) {
+                          return;
+                        }
 
                         setIsEditingAccount(false);
                       }}
@@ -1181,30 +1221,24 @@ export default function Account({
 								</button>
 
 								<button
-                  onClick={() => {
+                  onClick={async () => {
 
                     const isValid =
                       validatePasswordForm();
 
                     if (!isValid) return;
 
-                    if (
-                      passwordData.currentPassword !==
-                      currentUser.contrasena
-                    ) {
-                      setPasswordErrors({
-                        currentPassword:
-                          "La contraseña actual es incorrecta",
-                      });
-
-                      return;
-                    }
-
-                    const result = changePassword(
+                    const result = await changePassword(
+                      passwordData.currentPassword,
                       passwordData.newPassword,
                     );
 
                     if (!result?.success) {
+                      setPasswordErrors({
+                        currentPassword:
+                          result.error || "Error al cambiar contraseña",
+                      });
+
                       return;
                     }
 

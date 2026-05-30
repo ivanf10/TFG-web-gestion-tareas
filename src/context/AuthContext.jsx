@@ -11,23 +11,40 @@ export function AuthProvider({ children }) {
 
   // SESSION
   useEffect(() => {
+
     const storedUser =
       localStorage.getItem("currentUser");
 
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+    if (!storedUser || storedUser === "undefined") {
+      return;
     }
+
+    try {
+      setCurrentUser(
+        JSON.parse(storedUser)
+      );
+    } catch (error) {
+
+      localStorage.removeItem(
+        "currentUser"
+      );
+
+      console.error(
+        "Usuario inválido en localStorage"
+      );
+    }
+
   }, []);
 
   // LOGIN
-  const login = async (email, contrasena) => {
+  const login = async (email, password) => {
 
     setAuthLoading(true);
 
     try {
 
       const response = await fetch(
-        "http://localhost:3001/login",
+        `${import.meta.env.VITE_API_URL}/api/login`,
         {
           method: "POST",
 
@@ -37,7 +54,7 @@ export function AuthProvider({ children }) {
 
           body: JSON.stringify({
             email,
-            password: contrasena,
+            password: password,
           }),
         }
       );
@@ -86,7 +103,7 @@ export function AuthProvider({ children }) {
     try {
 
       const response = await fetch(
-        "http://localhost:3001/register",
+        `${import.meta.env.VITE_API_URL}/api/register`,
         {
           method: "POST",
 
@@ -98,7 +115,7 @@ export function AuthProvider({ children }) {
             nombre: newUser.nombre,
             apellido: newUser.apellido,
             email: newUser.email,
-            password: newUser.contrasena,
+            password: newUser.password,
           }),
         }
       );
@@ -137,6 +154,58 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // UPDATE USER
+  const updateCurrentUser = async (updatedData) => {
+
+    try {
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${currentUser.id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(updatedData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error,
+        };
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        ...updatedData,
+      };
+
+      setCurrentUser(updatedUser);
+
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify(updatedUser),
+      );
+
+      return {
+        success: true,
+      };
+
+    } catch (error) {
+
+      return {
+        success: false,
+        error: "Error de conexión",
+      };
+    }
+  };
+
   // LOGOUT
   const logout = () => {
     setCurrentUser(null);
@@ -151,6 +220,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateCurrentUser,
 
       authLoading,
       setAuthLoading,

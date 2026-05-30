@@ -210,7 +210,7 @@ export default function Header({
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
-                    const dueDate = new Date(task.dueDate);
+                    const dueDate = new Date(task.fechaLimite);
                     dueDate.setHours(0, 0, 0, 0);
 
                     const isLate = dueDate < today;
@@ -232,7 +232,7 @@ export default function Header({
                             type="checkbox"
                             checked={task.completed}
                             onChange={() => {
-                              toggleTaskStatus(task.id);
+                              toggleTaskStatus(task);
 
                               if (!task.completed) {
                                 markNotificationAsRead(task.id);
@@ -282,7 +282,7 @@ export default function Header({
                                       : "none",
                                 }}
                               >
-                                {task.title}
+                                {task.titulo}
                               </p>
                             </div>
 

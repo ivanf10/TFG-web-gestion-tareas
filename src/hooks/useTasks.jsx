@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:3001/tasks";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/tasks`;
 
 export function useTasks() {
 
@@ -27,9 +27,6 @@ export function useTasks() {
 const addTask = async (newTask) => {
   try {
 
-    console.log("TASK ENVIADA:");
-    console.log(newTask);
-
     const response = await fetch(API_URL, {
       method: "POST",
 
@@ -41,9 +38,6 @@ const addTask = async (newTask) => {
     });
 
     const data = await response.json();
-
-    console.log("RESPUESTA BACKEND:");
-    console.log(data);
 
     if (!response.ok) {
       throw new Error(data.error || "Error creating task");
@@ -116,9 +110,17 @@ const addTask = async (newTask) => {
   const toggleTaskStatus = async (task) => {
     try {
 
+      const newCompletedState = !task.completed;
+
       await updateTask({
         ...task,
-        completed: !task.completed,
+
+        completed: newCompletedState,
+
+        recordatorioActivo: newCompletedState
+          ? false
+          : task.enviarRecordatorio,
+
       });
 
     } catch (error) {

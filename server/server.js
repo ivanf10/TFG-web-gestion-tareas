@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import cloudinary from "./config/cloudinary.js";
 
 dotenv.config();
 
@@ -14,8 +16,10 @@ app.use(cors());
 
 app.use(express.json());
 
+app.use("/api/upload", uploadRoutes);
+
 /* LOGIN */
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
 
     const { email, password } = req.body;
@@ -60,7 +64,7 @@ app.post("/login", async (req, res) => {
 });
 
 /* REGISTER */
-app.post("/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
   try {
 
     const {
@@ -109,7 +113,7 @@ app.post("/register", async (req, res) => {
 });
 
 /* GET USERS */
-app.get("/users", async (req, res) => {
+app.get("/api/users", async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       include: {
@@ -131,7 +135,7 @@ app.get("/users", async (req, res) => {
 });
 
 /* CREATE USER */
-app.post("/users", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   try {
 
     const {
@@ -176,7 +180,7 @@ app.post("/users", async (req, res) => {
 });
 
 /* UPDATE USER */
-app.put("/users/:id", async (req, res) => {
+app.put("/api/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -193,17 +197,17 @@ app.put("/users/:id", async (req, res) => {
         id,
       },
       data: {
-        nombre,
-        apellido,
-        email,
-        rol,
+      nombre,
+      apellido,
+      email,
+      rol,
 
+      ...(departamentos !== undefined && {
         departamentos: {
-          set: (departamentos || []).map((id) => ({
-            id,
-          })),
+          set: departamentos.map((id) => ({ id })),
         },
-      },
+      }),
+      }
     });
 
     res.json(updatedUser);
@@ -217,30 +221,88 @@ app.put("/users/:id", async (req, res) => {
 });
 
 /* DELETE USER */
-app.delete("/users/:id", async (req, res) => {
+app.delete("/api/users/:id", async (req, res) => {
   try {
+
     const { id } = req.params;
 
-    await prisma.user.delete({
+    await prisma.$transaction(async (tx) => {
+
+    // OBTENER NOTAS DEL USUARIO
+    const userNotes = await tx.note.findMany({
+      where: {
+        createdById: id,
+      },
+    });
+
+    // BORRAR ARCHIVOS DE CLOUDINARY
+    for (const note of userNotes) {
+
+      if (note.imagePublicId) {
+        await cloudinary.uploader.destroy(
+          note.imagePublicId
+        );
+      }
+
+      if (note.audioPublicId) {
+        await cloudinary.uploader.destroy(
+          note.audioPublicId,
+          {
+            resource_type: "video",
+          }
+        );
+      }
+    }
+
+    // ELIMINAR NOTAS DEL USUARIO
+    await tx.note.deleteMany({
+      where: {
+        createdById: id,
+      },
+    });
+
+    // ELIMINAR TODAS LAS TAREAS ASIGNADAS AL USUARIO
+    await tx.task.deleteMany({
+      where: {
+        assignedToId: id,
+      },
+    });
+
+    // ELIMINAR TODAS LAS TAREAS DONDE PARTICIPA EL USUARIO
+    await tx.task.deleteMany({
+      where: {
+        OR: [
+          { assignedToId: id },
+          { createdById: id },
+        ],
+      },
+    });
+
+    // ELIMINAR USUARIO
+    await tx.user.delete({
       where: {
         id,
       },
     });
 
+  });
+
     res.json({
       success: true,
     });
+
   } catch (error) {
+
     console.error(error);
 
     res.status(500).json({
-      error: "Error eliminando usuario",
+      error: error.message,
     });
   }
 });
 
 /* GET DEPARTMENTS */
-app.get("/departments", async (req, res) => {
+app.get("/api/departments", async (req, res) => {
   try {
 
     const departments = await prisma.department.findMany({
@@ -266,7 +328,7 @@ app.get("/departments", async (req, res) => {
 });
 
 /* CREATE DEPARTMENT */
-app.post("/departments", async (req, res) => {
+app.post("/api/departments", async (req, res) => {
   try {
 
     const {
@@ -307,7 +369,7 @@ app.post("/departments", async (req, res) => {
 });
 
 /* UPDATE DEPARTMENT */
-app.put("/departments/:id", async (req, res) => {
+app.put("/api/departments/:id", async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -352,7 +414,7 @@ app.put("/departments/:id", async (req, res) => {
 });
 
 /* DELETE DEPARTMENT */
-app.delete("/departments/:id", async (req, res) => {
+app.delete("/api/departments/:id", async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -378,7 +440,7 @@ app.delete("/departments/:id", async (req, res) => {
 });
 
 /* GET TASKS */
-app.get("/tasks", async (req, res) => {
+app.get("/api/tasks", async (req, res) => {
   try {
 
     const tasks = await prisma.task.findMany({
@@ -407,10 +469,8 @@ app.get("/tasks", async (req, res) => {
 });
 
 /* CREATE TASK */
-app.post("/tasks", async (req, res) => {
+app.post("/api/tasks", async (req, res) => {
   try {
-
-    console.log(req.body);
 
     const {
       titulo,
@@ -429,8 +489,6 @@ app.post("/tasks", async (req, res) => {
         error: "createdById es obligatorio",
       });
     }
-
-    console.log(req.body);
 
     const task = await prisma.task.create({
       data: {
@@ -490,7 +548,7 @@ app.post("/tasks", async (req, res) => {
 });
 
 /* UPDATE TASK */
-app.put("/tasks/:id", async (req, res) => {
+app.put("/api/tasks/:id", async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -565,7 +623,7 @@ app.put("/tasks/:id", async (req, res) => {
 });
 
 /* DELETE TASK */
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/api/tasks/:id", async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -588,6 +646,371 @@ app.delete("/tasks/:id", async (req, res) => {
       error: "Error eliminando tarea",
     });
 
+  }
+});
+
+/* GET NOTES */
+app.get("/api/notes", async (req, res) => {
+  try {
+
+    const notes = await prisma.note.findMany({
+      include: {
+        createdBy: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    res.json(notes);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      error: "Error obteniendo notas",
+    });
+  }
+});
+
+/* CREATE NOTE */
+app.post("/api/notes", async (req, res) => {
+  try {
+
+    const {
+      titulo,
+      tipo,
+
+      contenido,
+
+      audioUrl,
+      audioPublicId,
+
+      imageUrl,
+      imagePublicId,
+
+      createdById,
+    } = req.body;
+
+    if (!createdById) {
+      return res.status(400).json({
+        error: "createdById es obligatorio",
+      });
+    }
+
+    const note = await prisma.note.create({
+      data: {
+        titulo,
+        tipo,
+
+        contenido:
+          tipo === "text"
+            ? contenido
+            : null,
+
+        audioUrl:
+          tipo === "audio"
+            ? audioUrl
+            : null,
+
+        audioPublicId:
+          tipo === "audio"
+            ? audioPublicId
+            : null,
+
+        imageUrl:
+          tipo === "image"
+            ? imageUrl
+            : null,
+
+        imagePublicId:
+          tipo === "image"
+            ? imagePublicId
+            : null,
+
+        createdBy: {
+          connect: {
+            id: createdById,
+          },
+        },
+      },
+
+      include: {
+        createdBy: true,
+      },
+    });
+
+    res.json(note);
+
+  } catch (error) {
+
+    console.error("CREATE NOTE ERROR:");
+    console.error(error);
+
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
+/* UPDATE NOTE */
+app.put("/api/notes/:id", async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const existingNote = await prisma.note.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!existingNote) {
+      return res.status(404).json({
+        error: "Nota no encontrada",
+      });
+    }
+
+    const {
+      titulo,
+      tipo,
+
+      contenido,
+
+      audioUrl,
+      audioPublicId,
+
+      imageUrl,
+      imagePublicId,
+    } = req.body;
+
+    /* DELETE OLD IMAGE */
+    if (
+      existingNote.imagePublicId &&
+      imagePublicId &&
+      existingNote.imagePublicId !== imagePublicId
+    ) {
+
+      await cloudinary.uploader.destroy(
+        existingNote.imagePublicId
+      );
+    }
+
+    /* DELETE IMAGE IF REMOVED */
+    if (
+      existingNote.imagePublicId &&
+      tipo === "image" &&
+      !imagePublicId
+    ) {
+
+      await cloudinary.uploader.destroy(
+        existingNote.imagePublicId
+      );
+    }
+
+    /* DELETE OLD AUDIO */
+    if (
+      existingNote.audioPublicId &&
+      audioPublicId &&
+      existingNote.audioPublicId !== audioPublicId
+    ) {
+
+      await cloudinary.uploader.destroy(
+        existingNote.audioPublicId,
+        {
+          resource_type: "video",
+        }
+      );
+    }
+
+    /* DELETE AUDIO IF REMOVED */
+    if (
+      existingNote.audioPublicId &&
+      tipo === "audio" &&
+      !audioPublicId
+    ) {
+
+      await cloudinary.uploader.destroy(
+        existingNote.audioPublicId,
+        {
+          resource_type: "video",
+        }
+      );
+    }
+
+    const updatedNote = await prisma.note.update({
+      where: {
+        id,
+      },
+
+      data: {
+        titulo,
+
+        contenido:
+          tipo === "text"
+            ? contenido
+            : null,
+
+        audioUrl:
+          tipo === "audio"
+            ? audioUrl
+            : null,
+
+        audioPublicId:
+          tipo === "audio"
+            ? audioPublicId
+            : null,
+
+        imageUrl:
+          tipo === "image"
+            ? imageUrl
+            : null,
+
+        imagePublicId:
+          tipo === "image"
+            ? imagePublicId
+            : null,
+      },
+
+      include: {
+        createdBy: true,
+      },
+    });
+
+    res.json(updatedNote);
+
+  } catch (error) {
+
+    console.error("UPDATE NOTE ERROR:");
+    console.error(error.message);
+    console.error(error);
+
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
+
+/* DELETE NOTE */
+app.delete("/api/notes/:id", async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const note = await prisma.note.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!note) {
+      return res.status(404).json({
+        error: "Nota no encontrada",
+      });
+    }
+
+    /* DELETE IMAGE CLOUDINARY */
+    if (note.imagePublicId) {
+
+      await cloudinary.uploader.destroy(
+        note.imagePublicId
+      );
+    }
+
+    /* DELETE AUDIO CLOUDINARY */
+    if (note.audioPublicId) {
+
+      await cloudinary.uploader.destroy(
+        note.audioPublicId,
+        {
+          resource_type: "video",
+        }
+      );
+    }
+
+    /* DELETE NOTE DB */
+    await prisma.note.delete({
+      where: {
+        id,
+      },
+    });
+
+    res.json({
+      success: true,
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      error: "Error eliminando nota",
+    });
+  }
+});
+
+/* CHANGE PASSWORD */
+app.put("/api/users/change-password", async (req, res) => {
+  try {
+
+    const {
+      userId,
+      currentPassword,
+      newPassword,
+    } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "Usuario no encontrado",
+      });
+    }
+
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!validPassword) {
+      return res.status(401).json({
+        error: "La contraseña actual es incorrecta",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      10
+    );
+
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    res.json({
+      success: true,
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      error: "Error cambiando contraseña",
+    });
   }
 });
 
